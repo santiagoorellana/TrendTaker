@@ -1,0 +1,35 @@
+{
+    "debugMode": false,
+    "forceCloseInvestmentAndExit": false,
+    "currencyQuote": "USDT",
+    "totalAmountOfCurrencyQuoteToInvest": "25",
+    "amountIsPercentOfBalance": false,
+    "blackList": [
+        "DEMONIO",
+        "KILLER"
+    ],
+    "preselected": ["BTC", "ETH"],
+    "maxCurrenciesToInvest": 10,
+    "graphSave": true,
+    "graphShow": true,
+    "telegramToken": "",
+    "telegramChatId": "",
+    "maxTickersToSelect": 50,
+    "candlesDays": 7,
+    "filters": {
+        "note": "Todos los valores de filtro se expresan en porciento.",
+        "tickers": {
+            "minProfit": 0,
+            "maxSpread": 1,
+            "maxSpreadOverProfit": 33,
+            "minProfitOverAmplitude": 33
+        },
+        "candles": {
+            "maxColapses": 20,
+            "minCompletion": 85,
+            "minProfitWhole": 1,
+            "minProfitLastHalf": 0,
+            "minProfitLastQuarter": 0
+        }
+    }
+}
