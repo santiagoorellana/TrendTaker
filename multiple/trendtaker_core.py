@@ -300,7 +300,7 @@ class TrendTakerCore():
                     if self.toLog: self.log.error(msg1)
                     if self.toConsole: print(msg1)
                     time.sleep(0.1)
-            msg1 = f'Se han seleccionado {len(marketsData)} mercados con ganancia potencial.'
+            msg1 = f'Se han preseleccionado {len(marketsData)} mercados con ganancia potencial.'
             if self.toLog: self.log.info(msg1)
             if self.toConsole: print(f'{msg1}\n')
             try:
@@ -410,8 +410,8 @@ class TrendTakerCore():
         return: True si el valor "amountAsBase" esta dentro de los limites permitidos. False si esta fuera de los limites.
         '''
         symbolId = symbolData['symbol']
-        base = self.core.exchangeInterface.base_of_symbol(symbolId)
-        quote = self.core.exchangeInterface.quote_of_symbol(symbolId)
+        base = self.exchangeInterface.base_of_symbol(symbolId)
+        quote = self.exchangeInterface.quote_of_symbol(symbolId)
         decimals = 2 if quote.upper() == "USDT" else 12
         amountMin = self.get_market_limit("min", symbolData)
         amountMax = self.get_market_limit("max", symbolData)

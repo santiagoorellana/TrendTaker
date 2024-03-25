@@ -2,13 +2,10 @@
     "debugMode": false,
     "forceCloseInvestmentAndExit": false,
     "currencyQuote": "USDT",
-    "totalAmountOfCurrencyQuoteToInvest": "25",
+    "amountToInvestAsQuote": "10",
     "amountIsPercentOfBalance": false,
-    "blackList": [
-        "DEMONIO",
-        "KILLER"
-    ],
-    "preselected": ["BTC", "ETH"],
+    "blackList": ["DEMONIO", "KILLER"],
+    "preselected": [],
     "maxCurrenciesToInvest": 10,
     "graphSave": true,
     "graphShow": true,

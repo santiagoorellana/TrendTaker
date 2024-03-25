@@ -21,7 +21,7 @@ DEFAULT_CONFIGURATION = {
     "debugMode": False,
     "forceCloseInvestmentAndExit": False,
     "currencyQuote": "USDT",
-    "totalAmountOfCurrencyQuoteToInvest": "100",
+    "amountToInvestAsQuote": 10,
     "amountIsPercentOfBalance": False,
     "blackList": ["DEMONIO", "KILLER"],
     "preselected": ["BTC", "ETH"],
@@ -37,7 +37,7 @@ DEFAULT_CONFIGURATION = {
         "tickers": {
             "minProfit": 0,
             "maxSpread": 1,
-            "maxSpreadOverProfit": 33,
+             "maxSpreadOverProfit": 33,
             "minProfitOverAmplitude": 33
         },
         "candles": {
@@ -324,8 +324,8 @@ class TrendTaker():
                 TrendTakerCore.show_object(self.currentBalance['free'], f"\n{msg1}") 
                 print(f"\n{msg2}")
             if not self.configuration.get("amountIsPercentOfBalance", True):
-                param = "totalAmountOfCurrencyQuoteToInvest"
-                if quoteBalance < float(self.configuration.get(param, 10)) and not DEBUG_MODE["ignoreInsufficientBalance"]:
+                param = "amountToInvestAsQuote"
+                if quoteBalance < float(self.configuration.get(param, 10))*2 and not DEBUG_MODE["ignoreInsufficientBalance"]:
                     msg1 = f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'
                     msg2 = f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'
                     if self.toLog: 
@@ -772,10 +772,7 @@ class TrendTaker():
         if self.only_buy_and_sell():
             return True
         if self.force_close_investment_and_exit():
-            return True
-        
-        #balanceOnQuote = lghsrjkhk
-        totalAmountToInvest = float(self.configuration["totalAmountOfCurrencyQuoteToInvest"])
+            return True        
         report = Report(self.core, self.botId, self.exchangeId, self.log, self.toLog, self.toConsole, DIRECTORY_GRAPHICS, "png")
         while True:
             if self.is_time_to_check_markets():
@@ -789,14 +786,14 @@ class TrendTaker():
                 while index < len(orderedMarkets):
                     marketData = orderedMarkets[index]
                     symbolId = marketData["symbolId"]
-                    lastPrice = float(marketData["tickerData"]["last"])
-                    minAmountAsBase = self.core.get_market_limit("min", marketData["symbolData"])
-                    minAmountAsQuote = minAmountAsBase * lastPrice
-                    #amountAsBase = totalAmountToInvest / lastPrice 
                     msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(float(marketData['tickerData']['percentage']), 2)} %"
                     if self.toConsole: print(msg1)
-                    if self.toLog: self.log.info(msg1)
-                    if True:  #self.check_market_limits(marketData["symbolData"], amountAsBase, lastPrice):
+                    if self.toLog: self.log.info(msg1)                    
+                    
+                    lastPrice = float(marketData["tickerData"]["last"])
+                    amountToInvestAsQuote = float(self.configuration.get("amountToInvestAsQuote", 10))
+                    amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
+                    if not self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
                         if DEBUG_MODE["showAllLiquidsAndGrowingsMarkets"]:
                             # En este modo debug, se guardan todos los graficos de los mercados que son 
                             # aceptables. Se crea y abre un fichero HTML que contiene las imagenes de los 
@@ -827,7 +824,7 @@ class TrendTaker():
                             # el estado de esa inversion.
                             if not self.close_current_investment():    
                                 break                      
-                            if self.invest_in(symbolId):
+                            if self.invest_in(symbolId, amountToInvestAsBase):
                                 fileName = report.create_unique_filename()
                                 report.create_graph(
                                     candles=candles1h, 
