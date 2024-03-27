@@ -115,12 +115,13 @@ class MarketMetrics():
         '''
         Calcula el spread del ticker, en porciento
         param tickerData: Objeto ticker obtenido del exchange, mediante la librería CCXT.
-        return: Spread en porciento utilizando como total el bid. Si ocurre error, devuelve None.
+        return: Spread en porciento utilizando como total el bid. 
+                Si ocurre error, devuelve un delta muy grande, inaceptable.
         '''
         try:
             return self._delta(tickerData['bid'], tickerData['ask'])
         except:
-            return None
+            return 1000000
     
 
     def ticker_profit_over_amplitude(self, tickerData: Ticker) -> Optional[float]:
@@ -136,9 +137,10 @@ class MarketMetrics():
                 Si ocurre un error, devuelve None.
         '''
         try:
-            return (tickerData['percentage'] / (self._delta(tickerData['low'], tickerData['high'])) * 100)
-        except:
-            return None
+            delta = self._delta(tickerData['low'], tickerData['high'])
+            return (tickerData['percentage'] / delta * 100)
+        except Exception as e:
+            return 0
     
 
     ####################################################################################################

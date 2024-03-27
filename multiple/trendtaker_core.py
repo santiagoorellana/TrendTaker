@@ -203,12 +203,21 @@ class TrendTakerCore():
         if tickerData is None:
             return False
         filters = configuration["filters"]["tickers"]
-        if float(tickerData.get('percentage', 0)) < float(filters.get("minProfit", 0)):
-            return False
-        if float(self.metrics.ticker_spread(tickerData)) > float(filters.get("maxSpreadOverProfit", 100)):
-            return False
-        if float(self.metrics.ticker_profit_over_amplitude(tickerData)) < float(filters.get("minProfitOverAmplitude", None)):
-            return False
+        
+        valueLimit = float(filters.get("minProfit", None))
+        if valueLimit is not None:
+            if float(tickerData.get('percentage', 0)) < valueLimit:
+                return False
+
+        valueLimit = float(filters.get("maxSpreadOverProfit", None))
+        if valueLimit is not None:
+            if float(self.metrics.ticker_spread(tickerData)) > valueLimit:
+                return False
+
+        valueLimit = float(filters.get("minProfitOverAmplitude", None))
+        if valueLimit is not None:
+            if float(self.metrics.ticker_profit_over_amplitude(tickerData)) < valueLimit:
+                return False
         return True
 
 

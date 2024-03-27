@@ -107,9 +107,7 @@ class TrendTaker():
         self.secret = secret
         self.toConsole = toConsole
         self.toLog = toLog
-                
-        self.utcInSecondsOfLastMarketsCheck = 0
-        self.maxElapsedSecondsFromLastMarketsCheck = 30 #* 60
+        
         self.secondsToNextCheck = 5 #60
         self.listOfValidMarketsId = None
         self.configuration = DEFAULT_CONFIGURATION
@@ -220,19 +218,6 @@ class TrendTaker():
             if toConsole:
                 print(f"{msg1}\n{msg2}")
         return False
-
-
-    def is_time_to_check_markets(self) -> bool:
-        '''
-        Indica si ha pasado suficiente tiempo para actualizar los datos de mercado. \n
-        return: True si se debe actualizar los datos de mercados. De lo cotrario devuelve False.
-        '''
-        utcCurrentInSeconds = self.core.exchangeInterface.exchange.seconds()
-        if (utcCurrentInSeconds - self.utcInSecondsOfLastMarketsCheck) >= self.maxElapsedSecondsFromLastMarketsCheck:
-            self.utcInSecondsOfLastMarketsCheck = utcCurrentInSeconds
-            return True
-        else:
-            return False
 
 
     def create_handler_of_logging(self) -> bool:
@@ -423,6 +408,8 @@ class TrendTaker():
                 if lastPrice > 0:
                     if self.core.check_market_limits(market, amountAsBase, lastPrice):
                         amountAsBase = self.core.exchangeInterface.round_to_precision(amountAsBase, symbolId, "amount")
+                        
+                        # aqui se deberia comprobar si el amount a invertir supera al balance disponible.
                         
                         order = self.core.execute_market('buy', symbolId, amountAsBase, DEBUG_MODE["simulateOrderExecution"])
                         if order is not None:                        
@@ -772,90 +759,81 @@ class TrendTaker():
         if self.only_buy_and_sell():
             return True
         if self.force_close_investment_and_exit():
-            return True        
+            return True
         report = Report(self.core, self.botId, self.exchangeId, self.log, self.toLog, self.toConsole, DIRECTORY_GRAPHICS, "png")
-        while True:
-            if self.is_time_to_check_markets():
-                validTickers = self.core.get_ordered_and_filtered_tickers(self.listOfValidMarketsId, self.configuration)
-                if validTickers is None: 
-                    continue
-                orderedMarkets = self.core.get_ordered_and_filtered_markets(validTickers, self.configuration)
-                if orderedMarkets is None: 
-                    continue
-                index = 0
-                while index < len(orderedMarkets):
-                    marketData = orderedMarkets[index]
-                    symbolId = marketData["symbolId"]
-                    msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(float(marketData['tickerData']['percentage']), 2)} %"
-                    if self.toConsole: print(msg1)
-                    if self.toLog: self.log.info(msg1)                    
-                    
-                    lastPrice = float(marketData["tickerData"]["last"])
-                    amountToInvestAsQuote = float(self.configuration.get("amountToInvestAsQuote", 10))
-                    amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
-                    if not self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
-                        if DEBUG_MODE["showAllLiquidsAndGrowingsMarkets"]:
-                            # En este modo debug, se guardan todos los graficos de los mercados que son 
-                            # aceptables. Se crea y abre un fichero HTML que contiene las imagenes de los 
-                            # graficos acompañados de los datos resultantes de la comprobacion del 
-                            # crecimiento y liquidez del mercado. No hace ninguna operacion en el mercado.
-                            fileName = report.create_unique_filename()
-                            report.create_graph(
-                                candles=marketData["candles1h"], 
-                                title=f'{self.botId} {self.exchangeId} {symbolId}', 
-                                fileName=fileName if self.configuration.get("graphSave", True) else "", 
-                                metrics=marketData["metrics"],
-                                show=False
-                            )     
-                            report.append_market_data(fileName, marketData["metrics"])
-                            index += 1  
-                            #if report.count_market_data() >= 10: break                           
-                            continue
-                        if marketData["symbolId"] == self.currentInvestment["symbol"]:
-                            # Si el mercado potencial seleccionado es el mismo en el que ya se ha 
-                            # invertido, no se hace nada y se procede a continuar verificando el
-                            # estado de esa inversion.
-                            break
-                        else:
-                            # Si el mercado potencial seleccionado es diferente al mercado en el que 
-                            # ya se ha invertido, se procede a salir de la inversion y realizar una
-                            # nueva inversion en el mercado potencial seleccionado. Se guarda la
-                            # grafica del mercado en un fichero y se procede a continuar verificando 
-                            # el estado de esa inversion.
-                            if not self.close_current_investment():    
-                                break                      
-                            if self.invest_in(symbolId, amountToInvestAsBase):
-                                fileName = report.create_unique_filename()
-                                report.create_graph(
-                                    candles=candles1h, 
-                                    title=f'{self.botId} {self.exchangeId} {symbolId}', 
-                                    fileName=fileName if self.configuration.get("graphSave", True) else "", 
-                                    metrics=metrics,
-                                    show=self.configuration.get("graphShow", False)
-                                )                                        
-                                break
-                    index += 1
+        validTickers = self.core.get_ordered_and_filtered_tickers(self.listOfValidMarketsId, self.configuration)
+        if validTickers is None: 
+            return False
+        orderedMarkets = self.core.get_ordered_and_filtered_markets(validTickers, self.configuration)
+        if orderedMarkets is None: 
+            return False
+        for marketData in orderedMarkets:
+            symbolId = marketData["symbolId"]
+            msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(float(marketData['tickerData']['percentage']), 2)} %"
+            if self.toConsole: print(msg1)
+            if self.toLog: self.log.info(msg1)                    
+            
+            lastPrice = float(marketData["tickerData"]["last"])
+            amountToInvestAsQuote = float(self.configuration.get("amountToInvestAsQuote", 10))
+            amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
+            if not self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
                 if DEBUG_MODE["showAllLiquidsAndGrowingsMarkets"]:
-                    report.create_web(True)
-                    if self.toLog: self.log.info('Terminado')
-                    if self.toConsole: print('Terminado')
-                    return True
-                if self.currentInvestment["symbol"] is None:
-                    msg1 = 'SIN INVERTIR: No se han encontrado mercados favorables.'
-                    if self.toLog: self.log.info(msg1)
-                    if self.toConsole: print(msg1)
-            status = self.current_investment_status()
-            # Verifica el precio y precio del mercado actual donde esta el capital, 
-            # para detectar si el mercado se vuelve desfavorable.
-            # Implementa un trailing stop para no perder.
-                
-            time.sleep(self.secondsToNextCheck)
+                    # En este modo debug, se guardan todos los graficos de los mercados que son 
+                    # aceptables. Se crea y abre un fichero HTML que contiene las imagenes de los 
+                    # graficos acompañados de los datos resultantes de la comprobacion del 
+                    # crecimiento y liquidez del mercado. No hace ninguna operacion en el mercado.
+                    fileName = report.create_unique_filename()
+                    report.create_graph(
+                        candles=marketData["candles1h"], 
+                        title=f'{self.botId} {self.exchangeId} {symbolId}', 
+                        fileName=fileName if self.configuration.get("graphSave", True) else "", 
+                        metrics=marketData["metrics"],
+                        show=False
+                    )     
+                    report.append_market_data(fileName, marketData["metrics"])
+                    #if report.count_market_data() >= 10: break                           
+                    continue
+                if marketData["symbolId"] == self.currentInvestment["symbol"]:
+                    # Si el mercado potencial seleccionado es el mismo en el que ya se ha 
+                    # invertido, no se hace nada y se procede a continuar verificando el
+                    # estado de esa inversion.
+                    break
+                else:
+                    # Si el mercado potencial seleccionado es diferente al mercado en el que 
+                    # ya se ha invertido, se procede a salir de la inversion y realizar una
+                    # nueva inversion en el mercado potencial seleccionado. Se guarda la
+                    # grafica del mercado en un fichero y se procede a continuar verificando 
+                    # el estado de esa inversion.
+                    if not self.close_current_investment():    
+                        break                      
+                    if self.invest_in(symbolId, amountToInvestAsBase):
+                        fileName = report.create_unique_filename()
+                        report.create_graph(
+                            candles=candles1h, 
+                            title=f'{self.botId} {self.exchangeId} {symbolId}', 
+                            fileName=fileName if self.configuration.get("graphSave", True) else "", 
+                            metrics=metrics,
+                            show=self.configuration.get("graphShow", False)
+                        )                                        
+                        break
+        if DEBUG_MODE["showAllLiquidsAndGrowingsMarkets"]:
+            report.create_web(True)
+            if self.toLog: self.log.info('Terminado')
+            if self.toConsole: print('Terminado')
+            return True
+        if self.currentInvestment["symbol"] is None:
+            msg1 = 'SIN INVERTIR: No se han encontrado mercados favorables.'
+            if self.toLog: self.log.info(msg1)
+            if self.toConsole: print(msg1)
+        status = self.current_investment_status()
+        # Verifica el precio y precio del mercado actual donde esta el capital, 
+        # para detectar si el mercado se vuelve desfavorable.
+        # Implementa un trailing stop para no perder.
         return True
 
 
 if __name__ == "__main__":
-    #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').readline())
-    credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
+    credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').read())
+    #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
     bot = TrendTaker('TrendTaker1', credentials['exchange'], credentials['key'], credentials['secret'], True, True)
     bot.execute()    
-    input()
