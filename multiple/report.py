@@ -9,6 +9,7 @@ from market_metrics import Metrics, MetricsSummary
 
 
 Formats = Literal["png", "jpg", "jpeg", "webp", "svg", "pdf"]
+Category = Literal["potentialMarket", "openInvest", "closedInvest"]
 
 DIRECTORY_GRAPHICS = "./graphics/"
 
@@ -64,7 +65,7 @@ class Report():
         return f'{self.botId}_{self.exchangeId}__{dateTimeLabel}.{self.extension}' 
     
 
-    def append_market_data(self, imageFileName:str, data:Dict) -> bool:
+    def append_market_data(self, imageFileName:str, data:Dict, category:Category) -> bool:
         '''
         Agrega a los datos de la web un fichero de imagen y datos descriptivos.
         param imageFileName: Nombre y ruta de un fichero de imagen existente.
