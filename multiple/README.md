@@ -6,6 +6,7 @@ Luego se obtienen las velas 1h de los ultimos 7 dias de los mercados filtrados y
 A partir de las estadisticas y valores para el analisis cuantitativo, se vuelven a filtrar los mercados, dejando solo los que tienen suficiente liquidez y que estan en tendencia creciente.
 Luego calcula el potencial para la inversion de cada mercado y se ordenan de mayor a menor.
 Se seleccionan los X primeros mercados con potencial y se invierte en ellos.
+A partir de las estadisticas y valores para el analisis cuantitativo, se calcula el precio TakeProfit y StopLoss de manera que el riesgo sea aceptable para el iversor.
 
 
 Directorio actual:

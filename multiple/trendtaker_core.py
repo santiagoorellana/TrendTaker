@@ -123,7 +123,7 @@ class TrendTakerCore():
             if dataCurrencyBase['active'] == False or dataCurrencyQuote['active'] == False:
                 return False
         except Exception as e:
-            msg1 = f"Error: Validando el mercado {dataMarket['symbol']}. Exception: {str(e)}"
+            msg1 = f"Error: Validando el mercado {dataMarket['symbol'] if dataMarket is not None else ''}. Exception: {str(e)}"
             if self.toLog: self.log.exception(msg1)
             if self.toConsole: print(msg1)
             return False

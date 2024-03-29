@@ -310,7 +310,7 @@ class TrendTaker():
                         
                         # aqui se deberia comprobar si el amount a invertir supera al balance disponible.
                         
-                        order = self.core.execute_market('buy', symbolId, amountAsBase, DEBUG_MODE["simulateOrderExecution"])
+                        order = self.core.execute_market('buy', symbolId, amountAsBase, DEBUG_MODE["simulateOrderExecution"])                        
                         if order is not None:                        
                             self.currentInvestments[symbolId] = {
                                 "symbol": symbolId,
@@ -604,6 +604,27 @@ class TrendTaker():
         return False
             
 
+    def only_invest_in(self):
+        '''
+        Hace prueba de invertir en un mercado introduciendo una orden de compra con takeProfit y stopLoss.\n
+        Si en DEBUG_MODE esta establecido el parametro el "onlyBuyAndSell", se ejecuta una orden de compra 
+        con los parametros de la configuracion y luego ejecutar una venta para salir de la inversion y terminar.\n
+        Nota: Esto se hace para comprobar el funcionamiento de las compras y ventas.\n
+        return: True si logra ejecutar las ordenes de compra y venta correctamente. False si ocurre error.
+        '''
+        if DEBUG_MODE["onlyInvestIn"] is not None:
+            marketId = str(DEBUG_MODE["onlyInvestIn"])
+            takeProfitPercent = 1
+            stopLossPercent = -1
+            self.invest_in(str(DEBUG_MODE["onlyInvestIn"]))
+            time.sleep(1)
+            self.close_current_investment()  
+            if self.toLog: self.log.info('Terminado')
+            if self.toConsole: print('Terminado')
+            return True
+        return False
+            
+
     def force_close_investment_and_exit(self):
         '''
         Cierra todas las inversiones abiertas\n
@@ -653,22 +674,23 @@ class TrendTaker():
             lastPrice = float(marketData["tickerData"]["last"])
             amountToInvestAsQuote = float(self.config.data.get("amountToInvestAsQuote", 10))
             amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
-            if not self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
+            if self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
                 fileName = report.create_unique_filename()
                 title = f'{self.botId} {self.exchangeId} {symbolId}'
                 report.create_graph(marketData["candles1h"], title, fileName, marketData["metrics"], False) 
                 #if report.count_market_data() >= 10: break              
                 category:Category = "potentialMarket"             
-                if symbolId in self.currentInvestments:
+                if symbolId not in self.currentInvestments:
+                    pass
+                    marketData["invest"]
+                    #if self.invest_in(symbolId, amountToInvestAsBase):
+                    #    category = "openInvest"
+                else:
                     # Si el mercado potencial seleccionado es el mismo en el que ya se ha invertido, no se hace nada y se procede a continuar verificando el estado de esa inversion.
                     pass
                     # Si ha superado el tiempo especifico para la imversio, deve termimarlo
                     #if not self.close_current_investment(symbolId):   
                     #    category = "closedInvest"  
-                else:
-                    pass
-                    #if self.invest_in(symbolId, amountToInvestAsBase):
-                    #    category = "openInvest"
                 report.append_market_data(fileName, marketData["metrics"], category)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
