@@ -2,7 +2,7 @@
 import os
 import datetime
 from exchange_interface import *
-
+from file_manager import *
 
 class Ledger():
     
@@ -31,7 +31,7 @@ class Ledger():
         return: Devuelve True si logra escribir el dato en Libro Mayor. De lo contrario devuelve False.
         '''
         if not os.path.isfile(self.fileName):
-            return self._data_to_file_text(self._csv_line_from(order, balanceQuote), self.fileName)
+            return FileManager.data_to_file_text(self._csv_line_from(order, balanceQuote), self.fileName, self.log, self.toConsole)
         else:
             msg1 = f'No existe el Libro Mayor (ledger): "{self.fileName}"'
             if self.toLog: self.log.exception(msg1)
@@ -44,7 +44,7 @@ class Ledger():
         Crea un nuevo fichero de Libro Mayor (ledger).
         return: Devuelve True si logra crear el Libro Mayor. De lo contrario devuelve False.
         '''
-        if self._data_to_file_text(self._csv_line(self.headers), self.fileName):
+        if FileManager.data_to_file_text(self._csv_line(self.headers), self.fileName, self.log, self.toConsole):
             msg1 = f'Se ha creado un nuevo Libro Mayor (ledger) en: "{self.fileName}"'
             if self.toLog: self.log.exception(msg1)
             if self.toConsole: print(msg1)
@@ -83,25 +83,5 @@ class Ledger():
         line = separator.join(valuesList)
         return line + endLine + '\n'
 
-
-    def _data_to_file_text(self, line:str, fileName:str) -> bool:
-        '''
-        Escribe en un fichero de texto la cadena de texto.
-        param line: Cadena que contiene el texto.
-        param fileName: Nombre y ruta del fichero que se debe crear.
-        return: True si logra crear el fichero. False si ocurre error.
-        '''
-        try:
-            with open(fileName, 'a') as file:
-                file.write(line)
-                return True
-        except Exception as e:
-            msg1 = f'Error creando el fichero: "{fileName}".'
-            msg2 = f'Exception: {str(e)}'
-            if self.toLog:
-                self.log.exception(f"{msg1} {msg2}")
-            if self.toConsole:
-                print(f"{msg1}\n{msg2}")
-        return False
 
         

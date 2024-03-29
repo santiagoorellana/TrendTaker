@@ -540,46 +540,6 @@ class TrendTakerCore():
             return None
 
 
-    def data_to_file_json(self, data:Any, fileName:str) -> bool:
-        '''
-        Escribe en un fichero JSON los datos del diccionario.
-        param data: Diccionario que contiene los datos.
-        param fileName: Nombre y ruta del fichero que se debe crear.
-        return: True si logra crear el fichero. False si ocurre error.
-        '''
-        try:
-            with open(fileName, 'w') as file:
-                file.write(json.dumps(data, indent=4))
-                return True
-        except Exception as e:
-            msg1 = f'Error creando el fichero: "{fileName}".'
-            msg2 = f'Exception: {str(e)}'
-            if self.toLog:
-                self.log.exception(f"{msg1} {msg2}")
-            if self.toConsole:
-                print(f"{msg1}\n{msg2}")
-        return False
-        
-        
-    def data_from_file_json(self, fileName:str, report:bool=True) -> Optional[Any]:
-        '''
-        Lee desde un fichero JSON los datos del diccionario.
-        param fileName: Nombre y ruta del fichero que se debe leer.
-        return: Diccionario con los datos del fichero. None si ocurre error.
-        '''
-        try:
-            with open(fileName, 'r') as file:
-                return json.load(file)
-        except Exception as e:
-            if report:
-                msg1 = f'Error leyendo el fichero: "{fileName}".'
-                msg2 = f'Exception: {str(e)}'
-                if self.toLog:
-                    self.log.exception(f"{msg1} {msg2}")
-                if self.toConsole:
-                    print(f"{msg1}\n{msg2}")
-        return None
-
         
 
 # Codigo de ejemplo y test.

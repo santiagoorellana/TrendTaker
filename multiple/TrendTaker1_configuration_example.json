@@ -13,8 +13,8 @@
         "ETH"
     ],
     "maxCurrenciesToInvest": 10,
-    "graphSave": true,
-    "graphShow": true,
+    "createWebReport": true,
+    "showWebReport": true,
     "telegramToken": "",
     "telegramChatId": "",
     "maxTickersToSelect": 50,

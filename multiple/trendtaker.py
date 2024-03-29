@@ -12,6 +12,7 @@ from report import *
 from ledger import Ledger
 from exchange_interface import *
 from configuration import *
+from file_manager import *
 
 DIRECTORY_LOGS = "./logs/"
 DIRECTORY_LEDGER = "./ledger/"
@@ -73,7 +74,7 @@ class TrendTaker():
         
         self.secondsToNextCheck = 5 #60
         self.listOfValidMarketsId = None
-        self.config = Configuration(botId, None, toLog, toConsole)
+        self.config = Configuration(botId, None, None, toLog, toConsole)
         self.initialBalance = {}
         self.currentBalance = None
         self.currentInvestments = {}
@@ -109,8 +110,8 @@ class TrendTaker():
         Escribe un fichero beat que contiene la fecha y hora de la escritura.\n
         Se escribe en la primera linea con el formato: year-month-day hour:minute:seconds \n
         param fileName: Nombre y ruta del fichero beat.
-        param toConsole: Poner a True para que se registren en el fichero log los mensajes que se generan.
-        param toLog: Poner a True para que se muestre e consola los mensajes que se generan.
+        param toLog: Poner a True para que se registren en el fichero log los mensajes que se generan.
+        param toConsole: Poner a True para que se muestre e consola los mensajes que se generan.
         return: True si logra crear el fichero beat. False si ocurre error.
         '''
         try:
@@ -320,7 +321,7 @@ class TrendTaker():
                                 "ticker": ticker,
                                 "balance": self.currentBalance
                             }
-                            self.core.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName)
+                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log, self.toConsole)
                             self.totalFeeAsQuote += float(order["fee"]["cost"])
                             
                             self.ledger.write(order, balanceQuote)
@@ -403,7 +404,7 @@ class TrendTaker():
                             hoursTotal = (dateTimeAsSeconds - self.initialExecutionDateTimeAsSeconds) / (60 * 60)
                             
                             del self.currentInvestments[symbolId]
-                            self.core.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName)
+                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log, self.toConsole)
                             self.totalFeeAsQuote += float(order["fee"]["cost"])
 
                             self.ledger.write(order, balanceQuote)
@@ -473,7 +474,7 @@ class TrendTaker():
         cerrarla en caso que sea necesario.\n
         return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
         '''
-        currentInvestmentData = self.core.data_from_file_json(self.currentInvestmentsFileName, report=False)
+        currentInvestmentData = FileManager.data_from_file_json(self.currentInvestmentsFileName, False, self.log, self.toConsole)
         if currentInvestmentData is not None:
             msg1 = f'Se ha encontrado un fichero de datos de inversiones actuales": "{self.currentInvestmentsFileName}"'
             if self.toLog: self.log.info(msg1)
@@ -536,7 +537,6 @@ class TrendTaker():
         Report.prepare_directory(DIRECTORY_GRAPHICS)
         
         if self.create_handler_of_logging():
-            self.config.log = self.log
             msg1 = f'Iniciando bot: {self.botId}'
             if self.toLog: self.log.info(msg1)
             if self.toConsole: print(f'\n{msg1}')
@@ -544,6 +544,8 @@ class TrendTaker():
             msg1 = f'exchangeId: {self.exchangeId}'
             if self.toLog: self.log.info(msg1)
             if self.toConsole: print(msg1)
+            self.config.log = self.log
+            self.config.core = self.core
             
             if self.core.exchangeInterface.check_exchange_methods(True):
                 self.ledger = Ledger(self.botId, DIRECTORY_LEDGER, self.log, self.toLog, self.toConsole)            
@@ -647,8 +649,7 @@ class TrendTaker():
             symbolId = marketData["symbolId"]
             msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(float(marketData['tickerData']['percentage']), 2)} %"
             if self.toConsole: print(msg1)
-            if self.toLog: self.log.info(msg1)                    
-            
+            if self.toLog: self.log.info(msg1)                                
             lastPrice = float(marketData["tickerData"]["last"])
             amountToInvestAsQuote = float(self.config.data.get("amountToInvestAsQuote", 10))
             amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
@@ -665,8 +666,9 @@ class TrendTaker():
                     #if not self.close_current_investment(symbolId):   
                     #    category = "closedInvest"  
                 else:
-                    if self.invest_in(symbolId, amountToInvestAsBase):
-                        category = "openInvest"
+                    pass
+                    #if self.invest_in(symbolId, amountToInvestAsBase):
+                    #    category = "openInvest"
                 report.append_market_data(fileName, marketData["metrics"], category)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])

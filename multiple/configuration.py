@@ -1,8 +1,6 @@
 
 from trendtaker_core import *
-import json
-import datetime
-
+from file_manager import *
 
 DEFAULT_CONFIGURATION = {
     "debugMode": False,
@@ -40,33 +38,13 @@ DEFAULT_CONFIGURATION = {
 
 class Configuration():
 
-    def __init__(self, botId:str, log:Any=None, toLog:bool=True, toConsole:bool=False):
+    def __init__(self, botId:str, core:Any=None, log:Any=None, toLog:bool=True, toConsole:bool=False):
         self.botId = botId
         self.log = log
+        self.core = core
         self.toLog = toLog
         self.toConsole = toConsole
         self.data = DEFAULT_CONFIGURATION
-
-    
-    def create_example_file(self, fileName:str, configurationExample:Any) -> bool:
-        ''' 
-        Crea un fichero JSON de ejemplo de configuracion.\n
-        param fileName: Nombre y ruta del fichero que se debe crear.
-        param configurationExample: Objeto con el ejemplo de configuracion
-        return: True si logra crear el fichero correctamente. False si ocurre error.
-        '''
-        try:
-            with open(fileName, 'w') as file:
-                file.write(json.dumps(configurationExample, indent=4))
-            return True
-        except Exception as e:
-            msg1 = f'Error creando el fichero de configuracion de ejemplo.'
-            msg2 = f'Exception: {str(e)}'
-            if self.log is not None and self.toLog:
-                self.log.error(f"{msg1} {msg2}")
-            if self.toConsole:
-                print(f"{msg1}\n{msg2}")
-        return False
 
 
     def load(self) -> bool:
@@ -79,12 +57,12 @@ class Configuration():
         try:
             fileNameConfiguration = f'{self.botId}_configuration.json'
             fileNameConfigurationExample = f'{self.botId}_configuration_example.json'
-            self.core.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfigurationExample)
-            loadedConfiguration = self.core.data_from_file_json(fileNameConfiguration, report=False)
+            FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfigurationExample, self.log, self.toConsole)
+            loadedConfiguration = FileManager.data_from_file_json(fileNameConfiguration, False, self.log, self.toConsole)
             if loadedConfiguration is not None:
                 self.configuration = loadedConfiguration
             else:
-                self.core.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfiguration)
+                FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfiguration, self.log, self.toConsole)
                 msg1 = '\nError: No se econtro un fichero de configuracion para el bot.'
                 msg2 = f'ATENCION: Se ha creado un fichero de configuracion default: "{fileNameConfiguration}"'
                 msg3 = 'Debe revisar o editar el fichero de configuracion antes de volver a ejecutar el bot.'
