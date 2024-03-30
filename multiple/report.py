@@ -7,6 +7,7 @@ from exchange_interface import ListOfCandles
 import plotly.graph_objects as go # type: ignore
 from market_metrics import Metrics, MetricsSummary
 from basics import *
+import logging
 
 
 Formats = Literal["png", "jpg", "jpeg", "webp", "svg", "pdf"]
@@ -16,16 +17,16 @@ DIRECTORY_GRAPHICS = "./graphics/"
 
 class Report(Basics):
     
-    def __init__(self, core, botId:str, exchangeId:str, log:Any=None, directory:str='./', createSubdirectory:bool=False, extension:Formats='png'):
+    def __init__(self, core, botId:str, exchangeId:str, directory:str='./', extension:Formats='png'):
         '''
         Crea un objeto para mostrar graficos de velas.
         param format: Formato con que se guarda la imagen. Pueden ser "png", "jpg", "jpeg", "webp", "svg" o "pdf".
         param directory: Directorio donde se crean los ficheros de los graficos.
         '''
+        self.log = logging.getLogger(botId)
         self.core = core
         self.botId = botId
         self.exchangeId = exchangeId
-        self.log = log
         self.directory = directory
         self.subdirectory = ""
         self.extension = extension

@@ -5,6 +5,8 @@ from exchange_interface import *
 from market_metrics import *
 from basics import *
 from typing import Any, Dict, Literal, Optional, List
+import logging
+
 
 MarketData = Dict
 Filters = Dict
@@ -18,14 +20,14 @@ INDENT = str("   ")
 
 class TrendTakerCore(Basics):
 
-    def __init__(self, exchangeId, apiKey, secret, log=None):
+    def __init__(self, botId:str, exchangeId:str, apiKey:str, secret:str):
+        self.log = logging.getLogger(botId)
         self.exchangeId = exchangeId
-        self.log = log  
-        self.exchangeInterface = ExchangeInterface(exchangeId, apiKey, secret, log=log)
+        self.exchangeInterface = ExchangeInterface(exchangeId, apiKey, secret, botId)
         self.metrics = MarketMetrics()
         self.validMarkets = None
         self.orderableMarket = None
-        self.outQuotes = None      
+        self.outQuotes = None     
 
 
     @staticmethod
@@ -296,7 +298,7 @@ class TrendTakerCore(Basics):
                     if self.is_potential_market(market, configuration):
                         marketsData.append(market)
                         msg1 = f"{msg1}  [POTENCIAL]"
-                    self.log.error(self.cmd(msg1))
+                    self.log.info(self.cmd(msg1))
                     time.sleep(0.1)
             self.log.info(self.cmd(f'Se han preseleccionado {len(marketsData)} mercados con ganancia potencial.', '', '\n'))
             try:

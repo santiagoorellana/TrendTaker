@@ -1,13 +1,7 @@
 
 import time
-import datetime
 from trendtaker_core import *
 import json
-import logging
-from logging.handlers import TimedRotatingFileHandler
-import regex # type: ignore
-import datetime
-import requests # type: ignore
 from report import *
 from ledger import Ledger
 from exchange_interface import *
@@ -73,37 +67,13 @@ class TrendTaker(Basics):
         
         self.secondsToNextCheck = 5 #60
         self.listOfValidMarketsId = None
-        self.config = Configuration(botId, None, None)
+        self.config = Configuration(botId, None)
         self.initialBalance = {}
         self.currentBalance = None
         self.currentInvestments = {}
         self.totalFeeAsQuote = 0
         
     
-    def create_logger(self, name:str, fileName:str, filesCount:int, debugMode:bool) -> Any:
-        '''
-        Prepara la configuracion del logging para guardar mensajes en fichero
-        de manera que se crea un fichero por cada dia de la semana.
-        La linea que se agrega al fichero logging, contendra el nombre del script,
-        la funcion o metodo y el numero de la linea donde se reporta el mensaje.\n
-        param fileName: jhgjh
-        param filesCount: jhgjhg
-        param debugMode: jhgjh
-        return: kgjh
-        '''
-        LOG_FORMAT = '%(asctime)s %(levelname)s %(module)s:%(funcName)s:%(lineno)04d - %(message)s'
-        handler = TimedRotatingFileHandler(fileName, when="midnight", backupCount=filesCount) 
-        handler.setLevel(logging.DEBUG if debugMode else logging.INFO)
-        formatter = logging.Formatter(LOG_FORMAT)
-        handler.setFormatter(formatter)
-        handler.suffix = "%Y%m%d"       # Este es el sufijo del nombre de fichero.
-        handler.extMatch = regex.compile(r"^\d{8}$")   
-        log = logging.getLogger(name)
-        logging.root.setLevel(logging.NOTSET)
-        log.addHandler(handler)
-        return log
-
-
     def create_handler_of_logging(self) -> bool:
         '''
         Crea un objeto para manejar los ficheros log\n
@@ -423,13 +393,12 @@ class TrendTaker(Basics):
         
         if self.create_handler_of_logging():
             self.log.info(self.cmd(f'Iniciando bot: {self.botId}', '\n'))
-            self.core = TrendTakerCore(self.exchangeId, self.apiKey, self.secret, self.log)
+            self.core = TrendTakerCore(self.botId, self.exchangeId, self.apiKey, self.secret)
             self.log.info(self.cmd(f'exchangeId: {self.exchangeId}'))
-            self.config.log = self.log
             self.config.core = self.core
             
             if self.core.exchangeInterface.check_exchange_methods(True):
-                self.ledger = Ledger(self.botId, DIRECTORY_LEDGER, self.log)            
+                self.ledger = Ledger(self.botId, DIRECTORY_LEDGER)            
                 if self.config.load():
                     time.sleep(1)
                     if self.get_current_balance():
@@ -530,7 +499,7 @@ class TrendTaker(Basics):
             return True
         if self.force_close_investment_and_exit():
             return True
-        report = Report(self.core, self.botId, self.exchangeId, self.log, DIRECTORY_GRAPHICS, "png")
+        report = Report(self.core, self.botId, self.exchangeId, DIRECTORY_GRAPHICS, "png")
         validTickers = self.core.get_ordered_and_filtered_tickers(self.listOfValidMarketsId, self.config.data)
         if validTickers is None: 
             return False

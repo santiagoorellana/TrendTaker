@@ -2,6 +2,7 @@
 from trendtaker_core import *
 from file_manager import *
 from basics import *
+import logging
 
 DEFAULT_CONFIGURATION = {
     "debugMode": False,
@@ -39,18 +40,17 @@ DEFAULT_CONFIGURATION = {
 
 class Configuration(Basics):
 
-    def __init__(self, botId:str, core:Any=None, log:Any=None):
+    def __init__(self, botId:str, core:Any=None):
         self.botId = botId
-        self.log = log
         self.core = core
         self.data = DEFAULT_CONFIGURATION
+        self.log = logging.getLogger(botId)
 
 
     def load(self) -> bool:
         '''
         Carga la configuracion desde un fichero JSON que y lo guarda en la propiedad "configuration" de la clase.
-        Si el fichero de configuracion no existe, establece la configuracion por defecto y crea el fichero.
-        Puede mostrar mensajes por pantalla y registrar en el log, segun los parametros del bot.\n
+        Si el fichero de configuracion no existe, establece la configuracion por defecto y crea el fichero.\n
         return: True si logra cargar la configuracion. False si ocurre error o no la carga.
         '''
         try:

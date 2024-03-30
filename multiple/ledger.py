@@ -4,19 +4,21 @@ import datetime
 from exchange_interface import *
 from file_manager import *
 from basics import *
+import logging
+
 
 class Ledger(Basics):
     
-    def __init__(self, botId:str, directory:str='./', log:Any=None):
+    def __init__(self, botId:str, directory:str='./'):
         '''
         Crea un objeto para manejar el fichero del Libro Mayor.
         param fileName: Nombre del fichero del Libro Mayor (ledger).
         '''
+        self.log = logging.getLogger(botId)
         self.headers = ['dateTime', 'symbol', 'side', 'amountAsBase', 'amountAsQuote', 'price', 'feeAsQuote', 'balanceQuote']
         dateTimeLabel = datetime.datetime.now().strftime("%Y%m")
         self.botId = botId
         self.directory = directory
-        self.log = log
         self.fileName = f'{self.directory}{self.botId}_ledger_{dateTimeLabel}.csv'
         if not os.path.isfile(self.fileName):
             self._create_ledger_file()

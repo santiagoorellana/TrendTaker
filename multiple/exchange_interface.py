@@ -3,6 +3,8 @@ import time
 import ccxt # type: ignore
 from basics import *
 from typing import List, Any, Dict, Union, Optional, Literal
+import logging
+
 
 Candle = List[Union[int, float]]
 ListOfCandles = List[Candle]
@@ -33,13 +35,13 @@ INSISTENCE_PAUSE_SECONDS = 1
 
 class ExchangeInterface(Basics):
 
-    def __init__(self, exchangeId:str, apiKey:str, secret:str, log:Any=None):
+    def __init__(self, exchangeId:str, apiKey:str, secret:str, logName:str):
         self.exchange: Any = None
         self.select_exchange(exchangeId, apiKey, secret)   #hitbtc, kraken
         self.exchangeId: str = exchangeId
         self.insistenceCountMax: int = INSISTENCE_COUNT_MAX
         self.insistencePauseSeconds: int = INSISTENCE_PAUSE_SECONDS
-        self.log: Any = log
+        self.log = logging.getLogger(logName)
 
 
     @staticmethod
@@ -353,6 +355,6 @@ class ExchangeInterface(Basics):
             
 # Codigo de ejemplo y test.
 if __name__ == "__main__":
-    x = ExchangeInterface('hitbtc', "", "", log=None)
+    x = ExchangeInterface('hitbtc', "", "")
     import json
     print(json.dumps(x.get_tickers(["BTC/USDT"]), indent=4))
