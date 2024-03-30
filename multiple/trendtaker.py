@@ -126,18 +126,9 @@ class TrendTaker(Basics):
     def load_markets(self) -> bool:
         '''
         Carga los datos de mercado y sus criptomonedas.\n
-        Puede mostrar mensajes por pantalla y registrar en el log, segun la configuracion.\n
         return: True si logra cargar los datos de mercado. False si ocurre error o no los carga.
         '''
-        if not self.core.load_markets():
-            self.log.error(self.cmd('Error: Cargando mercados.'))
-            return False
-        else:
-            countOfCurrencies = len(self.core.exchangeInterface.get_currencies())          
-            countOfMarkets = len(self.core.exchangeInterface.get_markets())
-            self.log.info(self.cmd(f'Total de criptomonedas del exchange: {countOfCurrencies}'))
-            self.log.info(self.cmd(f'Total de mercados del exchange: {countOfMarkets}'))
-            return True
+        return self.core.load_markets()
                 
                 
     def get_list_of_valid_markets(self) -> bool:
@@ -312,28 +303,7 @@ class TrendTaker(Basics):
         else:
             return True
     
-    
-    def is_valid_current_investment_structure(self, data) -> bool:
-        '''
-        Verifica que la estructura de los datos de la inversion actual sea correcta.
-        Se comprueba que existan todos los parametros.\n
-        param data: Datos a los que se les debe verificar y comprobar la estructura.
-        return: True si los datos son correctos. De lo contrario devuelve False.
-        '''
-        try:
-            if data.get("symbol", None) is None: return False
-            if data.get("initialPrice", None) is None: return False
-            if data.get("amountAsBase", None) is None: return False
-            if data.get("initialDateTimeAsSeconds", None) is None: return False
-            if data.get("fee", None) is None: return False
-            if data.get("ticker", None) is None: return False
-            if data.get("balance", None) is None: return False
-            return True
-        except Exception as e:
-            self.log.exception(self.cmd(f'Error en los datos de la inversion actual. Exception: {str(e)}'))
-            return False
-    
-    
+        
     def load_current_investment(self) -> bool:
         '''
         Carga desde un fichero los datos de la inversion actual en curso.\n
@@ -521,7 +491,7 @@ class TrendTaker(Basics):
                 category:Category = "potentialMarket"             
                 if symbolId not in self.currentInvestments:
                     pass
-                    marketData["invest"]
+                    #marketData["invest"]
                     #if self.invest_in(symbolId, amountToInvestAsBase):
                     #    category = "openInvest"
                 else:
