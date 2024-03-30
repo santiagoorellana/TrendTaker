@@ -1,6 +1,7 @@
 
 import time
 import ccxt # type: ignore
+from basics import *
 from typing import List, Any, Dict, Union, Optional, Literal
 
 Candle = List[Union[int, float]]
@@ -30,17 +31,15 @@ CANDLE_VOLUME = 5
 INSISTENCE_COUNT_MAX = 25
 INSISTENCE_PAUSE_SECONDS = 1
 
-class ExchangeInterface():
+class ExchangeInterface(Basics):
 
-    def __init__(self, exchangeId:str, apiKey:str, secret:str, log:Any=None, toLog:bool=True, toConsole:bool=False):
+    def __init__(self, exchangeId:str, apiKey:str, secret:str, log:Any=None):
         self.exchange: Any = None
         self.select_exchange(exchangeId, apiKey, secret)   #hitbtc, kraken
         self.exchangeId: str = exchangeId
         self.insistenceCountMax: int = INSISTENCE_COUNT_MAX
         self.insistencePauseSeconds: int = INSISTENCE_PAUSE_SECONDS
         self.log: Any = log
-        self.toLog: bool = toLog and self.log is not None
-        self.toConsole: bool = toConsole
 
 
     @staticmethod
@@ -78,9 +77,7 @@ class ExchangeInterface():
             self.exchangeId = exchangeId
             return True
         except Exception as e:
-            msg1 = f"Error: No se pudo seleccionar el exchange: {exchangeId}"
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f"Error: No se pudo seleccionar el exchange: {exchangeId}"))
             return False
 
 
@@ -91,9 +88,7 @@ class ExchangeInterface():
         return: True si el exchange contiene el metodo. False si falta el metodo.
         '''
         if not self.exchange.has[method]:
-            msg1 = f'Error: El exchange {self.exchangeId} no tiene el metodo "{method}".'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd(f'Error: El exchange {self.exchangeId} no tiene el metodo "{method}".'))
             return False
         else:
             return True
@@ -117,9 +112,7 @@ class ExchangeInterface():
                 missing += int(not self._check_exchange_method("createMarketOrder"))
             return missing == 0
         except Exception as e:
-            msg1 = f"Error: Verificando los metodos del exchange. Exception: {str(e)}"
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f"Error: Verificando los metodos del exchange. Exception: {str(e)}"))
             return False
 
 
@@ -138,9 +131,7 @@ class ExchangeInterface():
             except Exception as e:
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
-        msg1 = f"Error: Cargando datos de los mercados y sus cryptomonedas. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(f"Error: Cargando datos de los mercados y sus cryptomonedas. Exception: {exceptionMsg}"))
         return False
         
 
@@ -172,9 +163,7 @@ class ExchangeInterface():
             except Exception as e:
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
-        msg1 = f"Error: Cargando el balance de la cuenta. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(f"Error: Cargando el balance de la cuenta. Exception: {exceptionMsg}"))
         return None
                 
 
@@ -194,9 +183,7 @@ class ExchangeInterface():
             except Exception as e:
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
-        msg1 = f"Error: Obteniendo los tickers de todos los mercados. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(f"Error: Obteniendo los tickers de todos los mercados. Exception: {exceptionMsg}"))
         return None
         
 
@@ -214,9 +201,7 @@ class ExchangeInterface():
             except Exception as e:
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
-        msg1 = f"Error: Obteniendo el ticker del mercado {symbol}. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(f"Error: Obteniendo el ticker del mercado {symbol}. Exception: {exceptionMsg}"))
         return None
 
 
@@ -231,24 +216,17 @@ class ExchangeInterface():
         '''
         timeFrame = self.exchange.timeframes.get(timeFrame, None)
         if timeFrame is None:
-            msg1 = f"Error: El timeFrame {timeFrame} no esta soportado por el exchange."
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f"Error: El timeFrame {timeFrame} no esta soportado por el exchange."))
             return None
         exceptionMsg = ""
         for i in range(self.insistenceCountMax):
             try:
-                return self.exchange.fetch_ohlcv(
-                    symbol,
-                    timeFrame,
-                    params={'sort':'DESC', 'limit':count}
-                )
+                return self.exchange.fetch_ohlcv(symbol, timeFrame, params={'sort':'DESC', 'limit':count})
             except Exception as e:
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
         msg1 = f"Error: Obteniendo las ultimas {count} velas {timeFrame} del mercado {symbol}. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(msg1))
         return None
 
 
@@ -311,8 +289,7 @@ class ExchangeInterface():
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
         msg1 = f"Error: Comprando {amountAsBase} a precio de mercado en {symbol}. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(msg1))
         return None
         
         
@@ -331,8 +308,7 @@ class ExchangeInterface():
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
         msg1 = f"Error: Vediendo {amountAsBase} a precio de mercado en {symbol}. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(msg1))
         return None
         
         
@@ -351,8 +327,7 @@ class ExchangeInterface():
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
         msg1 = f"Error: Obteniendo la orden {orderId} en {symbol}. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(msg1))
         return None
         
         
@@ -371,14 +346,13 @@ class ExchangeInterface():
                 exceptionMsg = str(e)
                 time.sleep(self.insistencePauseSeconds) 
         msg1 = f"Error: Cancelando orden {orderId} en {symbol}. Exception: {exceptionMsg}"
-        if self.toLog: self.log.exception(msg1)
-        if self.toConsole: print(msg1)
+        self.log.exception(self.cmd(msg1))
         return None
         
         
             
 # Codigo de ejemplo y test.
 if __name__ == "__main__":
-    x = ExchangeInterface('hitbtc', "", "", log=None, toLog=False, toConsole=True)
+    x = ExchangeInterface('hitbtc', "", "", log=None)
     import json
     print(json.dumps(x.get_tickers(["BTC/USDT"]), indent=4))

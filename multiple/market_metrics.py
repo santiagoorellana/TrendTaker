@@ -15,7 +15,8 @@ class MarketMetrics():
     # las ultimas velas del mercado, obtenidas con la libreria CCXT y los devuelve en un objeto.
     ####################################################################################################
     
-    def calculate(self, ticker:Ticker, candles1h:ListOfCandles, preselected:ListOfCurrenciesId) -> Metrics:
+    @staticmethod
+    def calculate(ticker:Ticker, candles1h:ListOfCandles, preselected:ListOfCurrenciesId) -> Metrics:
         '''
         Devuelve un objeto con las metricas del mercado.\n
         Toma el ultimo ticker y las ultimas velas 1h del mercado, para hacer un resumen calculando
@@ -32,15 +33,15 @@ class MarketMetrics():
         result["ticker"] = {
             "lastPrice": float(ticker["last"]),
             "percentage": float(ticker["percentage"]),
-            "spread": self.ticker_spread(ticker),
-            "deltaOverAmplitude": self.ticker_profit_over_amplitude(ticker)
+            "spread": MarketMetrics.ticker_spread(ticker),
+            "deltaOverAmplitude": MarketMetrics.ticker_profit_over_amplitude(ticker)
         }
         result["candles"] = {
-            "whole": self._candles_statistics(candles1h, "whole"),
-            "lastHalf": self._candles_statistics(candles1h, "half2"),
-            "lastQuarter": self._candles_statistics(candles1h, "quarter4")
+            "whole": MarketMetrics._candles_statistics(candles1h, "whole"),
+            "lastHalf": MarketMetrics._candles_statistics(candles1h, "half2"),
+            "lastQuarter": MarketMetrics._candles_statistics(candles1h, "quarter4")
         }
-        result["potential"] = self._calculate_potential(result, preselected)
+        result["potential"] = MarketMetrics._calculate_potential(result, preselected)
         result["completed"] = True
         return result    
     
@@ -49,7 +50,8 @@ class MarketMetrics():
     # METODOS DE USO GENERAL 
     ####################################################################################################
     
-    def _delta(self, fromValue: float, toValue: float) -> float:
+    @staticmethod
+    def _delta(fromValue: float, toValue: float) -> float:
         '''
         Calcula la variación en porciento entre dos valores.
         Se puede utilizar para calcular el rendimiento de un activo o currecy.
@@ -62,7 +64,8 @@ class MarketMetrics():
         return (toValue - fromValue) / fromValue * 100
         
 
-    def _linear_interpolation(self, X: int, X0: int, Y0: float, X1: int, Y1: float) -> float:
+    @staticmethod
+    def _linear_interpolation(X: int, X0: int, Y0: float, X1: int, Y1: float) -> float:
         '''
         Devuelve la interpolacion lineal de Y para un valor de X dado.
         param X: Valor del eje X para el que se debe calcular la Y mediante interpolacion lineal.
@@ -75,7 +78,8 @@ class MarketMetrics():
         return float(((Y1 - Y0) / (X1 - X0)) * (X - X0) + Y0)
 
 
-    def _create_trend_line(self, priceBegin: float, priceEnd: float, count: int) -> List[float]:
+    @staticmethod
+    def _create_trend_line(priceBegin: float, priceEnd: float, count: int) -> List[float]:
         '''
         Devuelve una linea de precios que van desde el precio inicial hasta el final.
         param priceBegin: Precio inicial desde donde se calcula la interpolacion.
@@ -88,12 +92,13 @@ class MarketMetrics():
         try:
             if count < 3:
                 return []
-            return [self._linear_interpolation(index, 0, priceBegin, count-1, priceEnd) for index in range(count)]
+            return [MarketMetrics._linear_interpolation(index, 0, priceBegin, count-1, priceEnd) for index in range(count)]
         except Exception as e:
             return []
 
 
-    def _calculate_potential(self, metrics:Metrics, preselected:ListOfCurrenciesId):
+    @staticmethod
+    def _calculate_potential(metrics:Metrics, preselected:ListOfCurrenciesId):
         if str(metrics["base"]).upper() in preselected or str(metrics["base"]).lower() in preselected:
             return float(1000000)
         weightedValues = [
@@ -111,7 +116,8 @@ class MarketMetrics():
     # Calcula parametros a partir de los valores de un ticker obtenido mediante la libreria CCXT.
     ####################################################################################################
     
-    def ticker_spread(self, tickerData: Ticker) -> Optional[float]:
+    @staticmethod
+    def ticker_spread(tickerData: Ticker) -> Optional[float]:
         '''
         Calcula el spread del ticker, en porciento
         param tickerData: Objeto ticker obtenido del exchange, mediante la librería CCXT.
@@ -119,12 +125,13 @@ class MarketMetrics():
                 Si ocurre error, devuelve un delta muy grande, inaceptable.
         '''
         try:
-            return self._delta(tickerData['bid'], tickerData['ask'])
+            return MarketMetrics._delta(tickerData['bid'], tickerData['ask'])
         except:
             return 1000000
     
 
-    def ticker_profit_over_amplitude(self, tickerData: Ticker) -> Optional[float]:
+    @staticmethod
+    def ticker_profit_over_amplitude(tickerData: Ticker) -> Optional[float]:
         ''' 
         Devuelve la realacion entre el profit (percent) y la maxima amplitud (high - low) en porciento.
         Cada ticker que se recibe mediante la librería ccxt, tiene las estadisticas de las ultimas 24 
@@ -137,7 +144,7 @@ class MarketMetrics():
                 Si ocurre un error, devuelve None.
         '''
         try:
-            delta = self._delta(tickerData['low'], tickerData['high'])
+            delta = MarketMetrics._delta(tickerData['low'], tickerData['high'])
             return (tickerData['percentage'] / delta * 100)
         except Exception as e:
             return 0
@@ -148,7 +155,8 @@ class MarketMetrics():
     # Calculan parametros a partir de las ultimas velas del mercado, obtenidas con la libreria CCXT.
     ####################################################################################################
     
-    def _is_candle_colapse(self, candle: Candle, minDeltaAsPercent: float) -> bool:
+    @staticmethod
+    def _is_candle_colapse(candle: Candle, minDeltaAsPercent: float) -> bool:
         '''
         Permite saber si una vela esta colapsada.
         Una vela colapsada (doji, linea) tiene sus cuatro componentes open, low, high y close con valores 
@@ -162,13 +170,14 @@ class MarketMetrics():
         '''
         try:
             candleValues = candle[1:5]
-            deltaPercent =  self._delta(min(candleValues), max(candleValues))
+            deltaPercent =  MarketMetrics._delta(min(candleValues), max(candleValues))
             return deltaPercent < minDeltaAsPercent if deltaPercent is not None else True
         except:
             return True
     
 
-    def _candles_colapses(self, candles: ListOfCandles, minDeltaAsPercent:float=0.1) -> float:
+    @staticmethod
+    def _candles_colapses(candles: ListOfCandles, minDeltaAsPercent:float=0.1) -> float:
         '''
         Devuelve el porciento de velas colapsadas
         Una vela colapsada (doji, linea) tiene sus cuatro componentes open, low, high y close con valores 
@@ -181,13 +190,14 @@ class MarketMetrics():
         return: Devuelve el porciento de velas colapsadas. Si ocurre un error, devuelve 100.
         '''
         try:
-            colapses = len([filter(lambda candle: self._is_candle_colapse(candle, minDeltaAsPercent), candles)])
+            colapses = len([filter(lambda candle: MarketMetrics._is_candle_colapse(candle, minDeltaAsPercent), candles)])
             return float(colapses / len(candles) * 100)
         except Exception as e:
             return float(100)
 
 
-    def _candles_filter_time_range(self, candles: ListOfCandles, maxCandlesAgeAsHours: float) -> ListOfCandles:
+    @staticmethod
+    def _candles_filter_time_range(candles: ListOfCandles, maxCandlesAgeAsHours: float) -> ListOfCandles:
         '''
         Filtra las velas teniendo en cuenta la cantidad de horas requerida.
         Cuando se piden las velas al exchange mediante la libreria ccxt, se debe especificar la 
@@ -218,7 +228,8 @@ class MarketMetrics():
             return []
         
 
-    def _candles_1h_completion(self, candles1h: ListOfCandles, requestedCandlesCount: int) -> float:
+    @staticmethod
+    def _candles_1h_completion(candles1h: ListOfCandles, requestedCandlesCount: int) -> float:
         '''
         Devuelve el porciento de completitud del rango de velas de la lista        
         Cuando se piden las velas al exchange, se especifica la cantidad de velas. 
@@ -230,13 +241,14 @@ class MarketMetrics():
         return: Porciento de completitud del rango de las velas. Si ocurre un error, devuelve None.
         '''
         try:
-            candlesInTimeRange = len(self._candles_filter_time_range(candles1h, requestedCandlesCount))
+            candlesInTimeRange = len(MarketMetrics._candles_filter_time_range(candles1h, requestedCandlesCount))
             return float(candlesInTimeRange / requestedCandlesCount * 100)
         except Exception as e:
             return float(100)
 
 
-    def _candles_slice(self, candles: ListOfCandles, segment: Segment, count:int=1) -> ListOfCandles:
+    @staticmethod
+    def _candles_slice(candles: ListOfCandles, segment: Segment, count:int=1) -> ListOfCandles:
         '''
         Devuelve un segmento de las velas.
         param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
@@ -282,7 +294,8 @@ class MarketMetrics():
 
 
 
-    def _candles_statistics(self, candles: ListOfCandles, segment: Segment='whole', count:int=1) -> Optional[Dict]:
+    @staticmethod
+    def _candles_statistics(candles: ListOfCandles, segment: Segment='whole', count:int=1) -> Optional[Dict]:
         '''
         Devuelve estadisticas descriptivas del segmento de velas.
         param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
@@ -292,17 +305,17 @@ class MarketMetrics():
                 Si ocurre un error, devuelve None.
         '''
         try:
-            sliced = self._candles_slice(candles, segment, count)
+            sliced = MarketMetrics._candles_slice(candles, segment, count)
             if len(sliced) == 0:
                 return None
-            colapses = self._candles_colapses(sliced)
-            completion = self._candles_1h_completion(sliced, len(sliced))            
-            prices = [float(self._candle_estimated_average(candle)) for candle in sliced]
+            colapses = MarketMetrics._candles_colapses(sliced)
+            completion = MarketMetrics._candles_1h_completion(sliced, len(sliced))            
+            prices = [float(MarketMetrics._candle_estimated_average(candle)) for candle in sliced]
             average = float(sum(prices) / len(prices))
             absolutesDeviations = [abs(float(price) - average) for price in prices]
             deviation = sum(absolutesDeviations) / len(absolutesDeviations)            
-            trendLine = self._create_trend_line(prices[0], average, len(prices))
-            trendDeviation = self._candles_trend_deviation(sliced, trendLine) 
+            trendLine = MarketMetrics._create_trend_line(prices[0], average, len(prices))
+            trendDeviation = MarketMetrics._candles_trend_deviation(sliced, trendLine) 
             return {
                 "count": len(sliced),
                 "open": sliced[0][CANDLE_OPEN],
@@ -314,9 +327,9 @@ class MarketMetrics():
                 "percent": {
                     "colapses": colapses,
                     "completion": completion,
-                    "deviation": self._delta(average, deviation),
-                    "changeOpenToClose": self._delta(prices[0], prices[-1]),
-                    "changeOpenToAverage": self._delta(prices[0], average),
+                    "deviation": MarketMetrics._delta(average, deviation),
+                    "changeOpenToClose": MarketMetrics._delta(prices[0], prices[-1]),
+                    "changeOpenToAverage": MarketMetrics._delta(prices[0], average),
                     "speedOpenToClose":  abs(prices[0] - prices[-1]) / len(sliced),
                     "speedOpenToAverage":  abs(prices[0] - average) / len(sliced)
                 },
@@ -327,7 +340,8 @@ class MarketMetrics():
             return None
 
 
-    def _candles_trend_deviation(self, candles: ListOfCandles, trendLine: List[float]) -> Optional[Dict]:
+    @staticmethod
+    def _candles_trend_deviation(candles: ListOfCandles, trendLine: List[float]) -> Optional[Dict]:
         '''
         Devuelve los datos de la desviacion de las velas con respecto a una linea.
         param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
@@ -347,7 +361,7 @@ class MarketMetrics():
             lowerDeviation = list(filter(lambda deviation: deviation < 0, deviations))
             absolute = list(abs(deviation) for deviation in deviations)
             # Valores de desviacion expresados en porciento con respecto a la linea de tendencia.
-            deviationsAsPercent = list(float(self._delta(float(trendLine[index]), candles[index][CANDLE_CLOSE])) for index in range(len(candles)))
+            deviationsAsPercent = list(float(MarketMetrics._delta(float(trendLine[index]), candles[index][CANDLE_CLOSE])) for index in range(len(candles)))
             upperDeviationAsPercent = list(filter(lambda deviation: deviation > 0, deviationsAsPercent))
             lowerDeviationAsPercent = list(filter(lambda deviation: deviation < 0, deviationsAsPercent))
             absoluteAsPercent = list(abs(deviation) for deviation in deviationsAsPercent)
@@ -374,7 +388,8 @@ class MarketMetrics():
             return None
 
 
-    def _candle_estimated_average(self, candle: Candle) -> float:
+    @staticmethod
+    def _candle_estimated_average(candle: Candle) -> float:
         '''
         Devuelve una estimacion de la media (average) de los precios contenidos en la vela.
         Al no contar con la lista de precios de compra-venta que ocurren en el timeframe correspondiente

@@ -6,6 +6,7 @@ import datetime
 from exchange_interface import ListOfCandles
 import plotly.graph_objects as go # type: ignore
 from market_metrics import Metrics, MetricsSummary
+from basics import *
 
 
 Formats = Literal["png", "jpg", "jpeg", "webp", "svg", "pdf"]
@@ -13,10 +14,9 @@ Category = Literal["potentialMarket", "openInvest", "closedInvest"]
 
 DIRECTORY_GRAPHICS = "./graphics/"
 
-class Report():
+class Report(Basics):
     
-    def __init__(self, core, botId:str, exchangeId:str, log:Any=None, toLog:bool=True, toConsole:bool=False, 
-                 directory:str='./', createSubdirectory:bool=False, extension:Formats='png'):
+    def __init__(self, core, botId:str, exchangeId:str, log:Any=None, directory:str='./', createSubdirectory:bool=False, extension:Formats='png'):
         '''
         Crea un objeto para mostrar graficos de velas.
         param format: Formato con que se guarda la imagen. Pueden ser "png", "jpg", "jpeg", "webp", "svg" o "pdf".
@@ -26,8 +26,6 @@ class Report():
         self.botId = botId
         self.exchangeId = exchangeId
         self.log = log
-        self.toLog = toLog
-        self.toConsole = toConsole
         self.directory = directory
         self.subdirectory = ""
         self.extension = extension
@@ -51,7 +49,7 @@ class Report():
             try:
                 os.mkdir(directoryPath)   
             except Exception as e:
-                print(f'Error: Creando el directorio: {directoryPath}')
+                Report.cmd(f'Error: Creando el directorio: {directoryPath}')
                 return False
         return True
 
@@ -80,8 +78,7 @@ class Report():
             return True  
         except Exception as e:
             msg1 = f'Error: Agregando datos para la web.'
-            if self.toLog: self.log.exception(f'{msg1} Exception: {str(e)}Image: {imageFileName}  Data: {str(data)}')
-            if self.toConsole: print(msg1)
+            self.log.exception(f'{self.cmd(msg1)} Exception: {str(e)}Image: {imageFileName}  Data: {str(data)}')
             return False
         
         
@@ -116,9 +113,7 @@ class Report():
                 return True
         except Exception as e:
             msg1 = f'Error creando el fichero: "{self.fileName}".'
-            msg2 = f'Exception: {str(e)}'
-            if self.toLog: self.log.exception(f"{msg1} {msg2}")
-            if self.toConsole: print(f"{msg1}\n{msg2}")
+            self.log.exception(f"{self.cmd(msg1)} Exception: {str(e)}")
         return False
         
 
@@ -130,9 +125,8 @@ class Report():
         try:
             return webbrowser.open(os.path.abspath(self.fileName))
         except Exception as e:
-            msg1 = f'Error: Abriendo la web en el navegador.'
-            if self.toLog: self.log.exception(f'{msg1} Exception: {str(e)}  File: {self.fileName}')
-            if self.toConsole: print(msg1)
+            msg1 = 'Error: Abriendo la web en el navegador.'
+            self.log.exception(f'{self.cmd(msg1)} Exception: {str(e)}  File: {self.fileName}')
             return False
         
     
@@ -199,9 +193,7 @@ class Report():
                 fig.show()
             return True
         except:
-            msg1 = f'Error: No se pudo crear el grafico: {title}'
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f'Error: No se pudo crear el grafico: {title}'))
             return False
 
 

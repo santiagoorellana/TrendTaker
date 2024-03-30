@@ -3,10 +3,11 @@ import os
 import datetime
 from exchange_interface import *
 from file_manager import *
+from basics import *
 
-class Ledger():
+class Ledger(Basics):
     
-    def __init__(self, botId:str, directory:str='./', log:Any=None, toLog:bool=True, toConsole:bool=False):
+    def __init__(self, botId:str, directory:str='./', log:Any=None):
         '''
         Crea un objeto para manejar el fichero del Libro Mayor.
         param fileName: Nombre del fichero del Libro Mayor (ledger).
@@ -16,8 +17,6 @@ class Ledger():
         self.botId = botId
         self.directory = directory
         self.log = log
-        self.toLog = toLog
-        self.toConsole = toConsole
         self.fileName = f'{self.directory}{self.botId}_ledger_{dateTimeLabel}.csv'
         if not os.path.isfile(self.fileName):
             self._create_ledger_file()
@@ -31,11 +30,9 @@ class Ledger():
         return: Devuelve True si logra escribir el dato en Libro Mayor. De lo contrario devuelve False.
         '''
         if not os.path.isfile(self.fileName):
-            return FileManager.data_to_file_text(self._csv_line_from(order, balanceQuote), self.fileName, self.log, self.toConsole)
+            return FileManager.data_to_file_text(self._csv_line_from(order, balanceQuote), self.fileName, self.log)
         else:
-            msg1 = f'No existe el Libro Mayor (ledger): "{self.fileName}"'
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f'No existe el Libro Mayor (ledger): "{self.fileName}"'))
             return self._create_ledger_file()
     
     
@@ -44,10 +41,8 @@ class Ledger():
         Crea un nuevo fichero de Libro Mayor (ledger).
         return: Devuelve True si logra crear el Libro Mayor. De lo contrario devuelve False.
         '''
-        if FileManager.data_to_file_text(self._csv_line(self.headers), self.fileName, self.log, self.toConsole):
-            msg1 = f'Se ha creado un nuevo Libro Mayor (ledger) en: "{self.fileName}"'
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+        if FileManager.data_to_file_text(self._csv_line(self.headers), self.fileName, self.log):
+            self.log.exception(self.cmd(f'Se ha creado un nuevo Libro Mayor (ledger) en: "{self.fileName}"'))
             return True
         else:
             return False

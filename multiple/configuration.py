@@ -1,6 +1,7 @@
 
 from trendtaker_core import *
 from file_manager import *
+from basics import *
 
 DEFAULT_CONFIGURATION = {
     "debugMode": False,
@@ -36,14 +37,12 @@ DEFAULT_CONFIGURATION = {
 }
 
 
-class Configuration():
+class Configuration(Basics):
 
-    def __init__(self, botId:str, core:Any=None, log:Any=None, toLog:bool=True, toConsole:bool=False):
+    def __init__(self, botId:str, core:Any=None, log:Any=None):
         self.botId = botId
         self.log = log
         self.core = core
-        self.toLog = toLog
-        self.toConsole = toConsole
         self.data = DEFAULT_CONFIGURATION
 
 
@@ -57,34 +56,21 @@ class Configuration():
         try:
             fileNameConfiguration = f'{self.botId}_configuration.json'
             fileNameConfigurationExample = f'{self.botId}_configuration_example.json'
-            FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfigurationExample, self.log, self.toConsole)
-            loadedConfiguration = FileManager.data_from_file_json(fileNameConfiguration, False, self.log, self.toConsole)
+            FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfigurationExample, self.log)
+            loadedConfiguration = FileManager.data_from_file_json(fileNameConfiguration, False, self.log)
             if loadedConfiguration is not None:
                 self.configuration = loadedConfiguration
             else:
-                FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfiguration, self.log, self.toConsole)
-                msg1 = '\nError: No se econtro un fichero de configuracion para el bot.'
-                msg2 = f'ATENCION: Se ha creado un fichero de configuracion default: "{fileNameConfiguration}"'
-                msg3 = 'Debe revisar o editar el fichero de configuracion antes de volver a ejecutar el bot.'
-                if self.toLog: 
-                    self.log.error(msg1)
-                    self.log.error(msg2)
-                    self.log.error(msg3)
-                if self.toConsole: 
-                    print(msg1)
-                    print(msg2)
-                    print(msg3)
+                FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfiguration, self.log)
+                self.log.error(self.cmd('Error: No se econtro un fichero de configuracion para el bot.', '\n'))
+                self.log.error(self.cmd(f'ATENCION: Se ha creado un fichero de configuracion default: "{fileNameConfiguration}"'))
+                self.log.error(self.cmd('Debe revisar o editar el fichero de configuracion antes de volver a ejecutar el bot.'))
                 return False
-            msg1 = 'La configuracion actual es:'
-            if self.toLog: 
-                self.log.info(f"{msg1} {str(self.configuration)}")
-            if self.toConsole: 
-                TrendTakerCore.show_object(self.configuration, f"\n{msg1}") 
+            self.log.info(f"La configuracion actual es: {str(self.configuration)}")
+            TrendTakerCore.show_object(self.configuration, "\nLa configuracion actual es:") 
             return True
         except Exception as e:
-            msg1 = f'Error: No se pudo establecer la configuracion del bot. Exception: {str(e)}'
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f'Error: No se pudo establecer la configuracion del bot. Exception: {str(e)}'))
             return False
 
 

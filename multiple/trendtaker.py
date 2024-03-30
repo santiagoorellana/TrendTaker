@@ -13,6 +13,7 @@ from ledger import Ledger
 from exchange_interface import *
 from configuration import *
 from file_manager import *
+from basics import *
 
 DIRECTORY_LOGS = "./logs/"
 DIRECTORY_LEDGER = "./ledger/"
@@ -62,25 +63,23 @@ if DEBUG_MODE["randomMarketOrdering"] or DEBUG_MODE["skipLiquidAndGrowingMarketC
     DEBUG_MODE["simulateOrderExecution"] = True
 
 
-class TrendTaker():
+class TrendTaker(Basics):
     
-    def __init__(self, botId:str, exchangeId:str, apiKey:str, secret:str, toConsole:bool=False, toLog:bool=True):
+    def __init__(self, botId:str, exchangeId:str, apiKey:str, secret:str):
         self.botId = botId
         self.exchangeId = exchangeId
         self.apiKey = apiKey
         self.secret = secret
-        self.toConsole = toConsole
-        self.toLog = toLog
         
         self.secondsToNextCheck = 5 #60
         self.listOfValidMarketsId = None
-        self.config = Configuration(botId, None, None, toLog, toConsole)
+        self.config = Configuration(botId, None, None)
         self.initialBalance = {}
         self.currentBalance = None
         self.currentInvestments = {}
         self.totalFeeAsQuote = 0
-
-
+        
+    
     def create_logger(self, name:str, fileName:str, filesCount:int, debugMode:bool) -> Any:
         '''
         Prepara la configuracion del logging para guardar mensajes en fichero
@@ -103,61 +102,6 @@ class TrendTaker():
         logging.root.setLevel(logging.NOTSET)
         log.addHandler(handler)
         return log
-        
-        
-    def write_beat(self, fileName:str) -> bool:
-        '''
-        Escribe un fichero beat que contiene la fecha y hora de la escritura.\n
-        Se escribe en la primera linea con el formato: year-month-day hour:minute:seconds \n
-        param fileName: Nombre y ruta del fichero beat.
-        param toLog: Poner a True para que se registren en el fichero log los mensajes que se generan.
-        param toConsole: Poner a True para que se muestre e consola los mensajes que se generan.
-        return: True si logra crear el fichero beat. False si ocurre error.
-        '''
-        try:
-            dateTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")    
-            with open(fileName, 'w') as file:
-                file.write(dateTime)
-                return True
-        except Exception as e:
-            msg1 = f'Error creando el fichero beat: "{fileName}".'
-            msg2 = f'Exception: {str(e)}'
-            if self.toLog:
-                self.log.exception(f"{msg1} {msg2}")
-            if self.toConsole:
-                print(f"{msg1}\n{msg2}")
-        return False
-
-
-    def send_to_telegram(self, message:str, emoji:str=None, toConsole:bool=False, toLog:bool=True) -> Optional[Any]:
-        '''
-        Envia un mensaje a un canal, grupo o usuario.\n
-        param message: String con el mensaje que se desea enviar.
-        param emoji: String con los caracteres o codigos de los emojis. Ej: '\U0001F534'
-        param toConsole: Poner a True para que se registren en el fichero log los mensajes que se generan.
-        param toLog: Poner a True para que se muestre e consola los mensajes que se generan.
-        return: Respuesta del API de Telegram o None si ocurre un error.
-        '''
-        if emoji is not None:
-            message = emoji + message 
-        try:
-            response = requests.post(
-                'https://api.telegram.org/bot{}/sendMessage'.format(self.config.data.get("telegramToken")), 
-                json={
-                    'chat_id': self.config.data.get("telegramChatId"), 
-                    'text': message
-                }
-            )   
-            return True     
-        except Exception as e:
-            # Informa con ERROR para no llenar el fichero log innnecesariamente con el trace back de un error de conexion.
-            msg1 = f'Error enviando mensaje por Telegram.'
-            msg2 = f'Exception: {str(e)}'
-            if toLog:
-                self.log.error(f"{msg1} {msg2}")
-            if toConsole:
-                print(f"{msg1}\n{msg2}")
-        return False
 
 
     def create_handler_of_logging(self) -> bool:
@@ -172,12 +116,10 @@ class TrendTaker():
         try:
             self.log = self.create_logger(self.botId, f'{DIRECTORY_LOGS}{self.botId}.log', 7, True)    
         except OSError as e: 
-            if self.toConsole:
-                print(f"{msg1}\OSError: {str(e)}")
+            self.cmd(f"{msg1}\OSError: {str(e)}")
             return False
         except Exception as e:
-            if self.toConsole:
-                print(f"{msg1}\Exception: {str(e)}")
+            self.cmd(f"{msg1}\Exception: {str(e)}")
             return False
         return True
 
@@ -191,8 +133,7 @@ class TrendTaker():
         self.currentBalance = self.core.exchangeInterface.get_balance()
         if self.currentBalance is None:
             msg1 = 'Error: No se pudo obtener el balance actual de la cuenta.'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd(msg1))
             return False
         else:
             if self.initialBalance == {}:
@@ -200,24 +141,14 @@ class TrendTaker():
             quote = self.config.data['currencyQuote']
             quoteBalance = float(self.currentBalance['free'][quote])
             msg1 = 'El balance libre actual de la cuenta es:'
-            msg2 = f'El balance libre actual de {quote} es: {round(quoteBalance, 10)}'
-            if self.toLog: 
-                self.log.info(f"{msg1} {str(self.currentBalance)}")
-                self.log.info(msg2)
-            if self.toConsole: 
-                TrendTakerCore.show_object(self.currentBalance['free'], f"\n{msg1}") 
-                print(f"\n{msg2}")
+            self.log.info(f"{msg1} {str(self.currentBalance)}")
+            TrendTakerCore.show_object(self.currentBalance['free'], f"\n{msg1}") 
+            self.log.info(self.cmd(f'El balance libre actual de {quote} es: {round(quoteBalance, 10)}', "\n"))
             if not self.config.data.get("amountIsPercentOfBalance", True):
                 param = "amountToInvestAsQuote"
                 if quoteBalance < float(self.config.data.get(param, 10))*2 and not DEBUG_MODE["ignoreInsufficientBalance"]:
-                    msg1 = f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'
-                    msg2 = f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'
-                    if self.toLog: 
-                        self.log.error(msg1)
-                        self.log.info(msg2)
-                    if self.toConsole: 
-                        print(msg1)
-                        print(msg2)
+                    self.log.error(self.cmd(f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'))
+                    self.log.info(self.cmd(f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'))
                     return False
             return True
 
@@ -229,21 +160,13 @@ class TrendTaker():
         return: True si logra cargar los datos de mercado. False si ocurre error o no los carga.
         '''
         if not self.core.load_markets():
-            msg1 = 'Error: Cargando mercados.'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd('Error: Cargando mercados.'))
             return False
         else:
             countOfCurrencies = len(self.core.exchangeInterface.get_currencies())          
             countOfMarkets = len(self.core.exchangeInterface.get_markets())
-            msg1 = f'Total de criptomonedas del exchange: {countOfCurrencies}'
-            msg2 = f'Total de mercados del exchange: {countOfMarkets}'
-            if self.toLog: 
-                self.log.info(msg1)
-                self.log.info(msg2)
-            if self.toConsole: 
-                print(msg1)
-                print(msg2)
+            self.log.info(self.cmd(f'Total de criptomonedas del exchange: {countOfCurrencies}'))
+            self.log.info(self.cmd(f'Total de mercados del exchange: {countOfMarkets}'))
             return True
                 
                 
@@ -260,32 +183,35 @@ class TrendTaker():
         self.listOfValidMarketsId = self.core.get_list_of_valid_markets(
             str(self.config.data['currencyQuote']),
             self.config.data.get("blackList", None)
-            )
+        )
         if self.listOfValidMarketsId is None:
-            msg1 = 'Error: Filtrando mercados validos y operables.'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd('Error: Filtrando mercados validos y operables.'))
             return False
         else:
             countOfValidMarkets = len(self.listOfValidMarketsId)
-            msg1 = f'Total de mercados validos y operables encontrados: {countOfValidMarkets}'
-            msg2 = f'Mercados validos y operables encontrados: {str(self.listOfValidMarketsId)}'
-            if self.toLog: 
-                self.log.info(msg1)
-                self.log.info(msg2)
-            if self.toConsole: print(msg1)
+            self.log.info(self.cmd(f'Total de mercados validos y operables encontrados: {countOfValidMarkets}'))
+            self.log.info(f'Mercados validos y operables encontrados: {str(self.listOfValidMarketsId)}')
             if countOfValidMarkets == 0:
-                msg1 = 'Se necesita al menos un mercado valido y operable.'
-                if self.toLog: self.log.error(msg1)
-                if self.toConsole: print(msg1)
+                self.log.error(self.cmd('Se necesita al menos un mercado valido y operable.'))
                 return False
             return True
 
     
-    def invest_in(self, symbolId:MarketId, amountAsBase:float) -> bool:
+    def invest_in(
+            self, 
+            symbolId:MarketId, 
+            amountAsBase:float=None, 
+            profitPercent:float=None, 
+            maxLossPercent:float=None, 
+            maxHours:float=None
+        ) -> bool:
         '''
         Abre una inversion nueva comprando el activo.\n
         param symbolId: Identificador del mercado en el que se debe invertir.
+        param amountAsBase: Cantidad de moneda base que se debe comprar para invertir.
+        param profitPercent: Porciento de ganancia con que se espera cerrar la inversion.
+        param maxLossPercent: Maximo porciento de perdida que se va a tolerar.
+        param maxHours: Cantidad maxima de horas que puede estar abierta la inversion.
         return: True si logra abrir la inversion. False si no la abre.
         '''
         market = self.core.exchangeInterface.get_markets()[symbolId]
@@ -296,9 +222,7 @@ class TrendTaker():
                 quote = self.core.exchangeInterface.quote_of_symbol(symbolId)
                 self.currentBalance = self.core.exchangeInterface.get_balance()
                 if self.currentBalance is None:
-                    msg1 = 'Error: No se pudo obtener el balance actual de la cuenta.'
-                    if self.toLog: self.log.error(msg1)
-                    if self.toConsole: print(msg1)
+                    self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
                     balanceQuote = None
                 else:
                     balanceQuote = self.currentBalance["free"][quote]
@@ -321,7 +245,7 @@ class TrendTaker():
                                 "ticker": ticker,
                                 "balance": self.currentBalance
                             }
-                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log, self.toConsole)
+                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log)
                             self.totalFeeAsQuote += float(order["fee"]["cost"])
                             
                             self.ledger.write(order, balanceQuote)
@@ -330,40 +254,28 @@ class TrendTaker():
                             msg2 = f'cantidad comprada: {order["filled"]} {base}'
                             msg3 = f'valor aproximado: {float(order["filled"]) * float(order["average"])} {quote}'
                             msg4 = f'precio de compra: {order["average"]} {quote}'
-                            if self.toLog: 
-                                self.log.info(f'{msg1} {msg2} {msg3} {msg4}')
-                            if self.toConsole: 
-                                print(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n')
+                            self.log.info(f'{msg1} {msg2} {msg3} {msg4}')
+                            self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n')
                             return True
                 else:
                     msg1 = f'Error: No se pudo obtener el precio del ticker del mercado {symbolId}'
-                    if self.toLog: self.log.error(f'{msg1}. Ticker: {ticker}')
-                    if self.toConsole: print(msg1)
+                    self.log.error(f'{self.cmd(msg1)}. Ticker: {ticker}')
             else:
-                msg1 = f'Error: No se pudo obtener el ticker del mercado {symbolId}'
-                if self.toLog: self.log.error(msg1)
-                if self.toConsole: print(msg1)
+                self.log.error(self.cmd(f'Error: No se pudo obtener el ticker del mercado {symbolId}'))
         else:
-            msg1 = f'Error: No se pudieron obtener los datos del mercado {symbolId}'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
-        msg1 = f'Error: No se pudo invertir en el mercado {symbolId}'
-        if self.toLog: self.log.error(msg1)
-        if self.toConsole: print(msg1)
-        #Se deberia informar esto por otra via adicional.
+            self.log.error(self.cmd(f'Error: No se pudieron obtener los datos del mercado {symbolId}'))
+        self.log.error(self.cmd(f'Error: No se pudo invertir en el mercado {symbolId}'))
         return False
 
     
-    def close_current_investment(self, symbolId:MarketId) -> bool:
+    def close_investment(self, symbolId:MarketId) -> bool:
         '''
         Cierra la inversion actual vendiendola al instante.
         Vende la misma cantidad de activo que se compro al momento de invertir.\n
         return: True si logra cerrar la inversion. False si no la cierra.
         '''
         if symbolId not in self.currentInvestments:
-            msg1 = f'Error: No se encuentran datos de la inversion actual en el mercado {symbolId}'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd(f'Error: No se encuentran datos de la inversion actual en el mercado {symbolId}'))
             return False
         investment = self.currentInvestments[symbolId]
         if symbolId is not None:
@@ -375,9 +287,7 @@ class TrendTaker():
                     quote = self.core.exchangeInterface.quote_of_symbol(symbolId)
                     self.currentBalance = self.core.exchangeInterface.get_balance()
                     if self.currentBalance is None:
-                        msg1 = 'Error: No se pudo obtener el balance actual de la cuenta.'
-                        if self.toLog: self.log.error(msg1)
-                        if self.toConsole: print(msg1)
+                        self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
                         balanceQuote = None
                     else:
                         balanceQuote = self.currentBalance["free"][quote]
@@ -404,7 +314,7 @@ class TrendTaker():
                             hoursTotal = (dateTimeAsSeconds - self.initialExecutionDateTimeAsSeconds) / (60 * 60)
                             
                             del self.currentInvestments[symbolId]
-                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log, self.toConsole)
+                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log)
                             self.totalFeeAsQuote += float(order["fee"]["cost"])
 
                             self.ledger.write(order, balanceQuote)
@@ -417,27 +327,17 @@ class TrendTaker():
                             msg6 = f'profit de inversion: {profit}% en {round(hours, 2)} horas'
                             msg7 = f'profit total: {profitTotal}% en {round(hoursTotal, 2)} horas'
                             msg8 = f'fee total: {round(self.totalFeeAsQuote, 2)} {quote} en {round(hoursTotal, 2)} horas'
-                            if self.toLog: 
-                                self.log.info(f'{msg1} {msg2} {msg3} {msg4} {msg5} {msg6} {msg7} {msg8}')
-                            if self.toConsole: 
-                                print(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n   {msg5}\n   {msg6}\n   {msg7}\n   {msg8}\n')
+                            self.log.info(f'{msg1} {msg2} {msg3} {msg4} {msg5} {msg6} {msg7} {msg8}')
+                            self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n   {msg5}\n   {msg6}\n   {msg7}\n   {msg8}\n')
                             return True
                     else:
                         msg1 = f'Error: No se pudo obtener el precio del ticker del mercado {symbolId}'
-                        if self.toLog: self.log.error(f'{msg1}. Ticker: {ticker}')
-                        if self.toConsole: print(msg1)                    
+                        self.log.error(f'{self.cmd(msg1)}. Ticker: {ticker}')                 
                 else:
-                    msg1 = f'Error: No se pudo obtener el ticker del mercado {symbolId}'
-                    if self.toLog: self.log.error(msg1)
-                    if self.toConsole: print(msg1)
+                    self.log.error(self.cmd(f'Error: No se pudo obtener el ticker del mercado {symbolId}'))
             else:
-                msg1 = f'Error: No se pudieron obtener los datos del mercado {symbolId}'
-                if self.toLog: self.log.error(msg1)
-                if self.toConsole: print(msg1)
-            msg1 = f'Error: No se pudo cerrar la inversion en el mercado {symbolId}'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
-            #Se deberia informar esto por otra via adicional.
+                self.log.error(self.cmd(f'Error: No se pudieron obtener los datos del mercado {symbolId}'))
+            self.log.error(self.cmd(f'Error: No se pudo cerrar la inversion en el mercado {symbolId}'))
             return False
         else:
             return True
@@ -460,9 +360,7 @@ class TrendTaker():
             if data.get("balance", None) is None: return False
             return True
         except Exception as e:
-            msg1 = f'Error en los datos de la inversion actual. Exception: {str(e)}'
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(f'Error en los datos de la inversion actual. Exception: {str(e)}'))
             return False
     
     
@@ -474,25 +372,18 @@ class TrendTaker():
         cerrarla en caso que sea necesario.\n
         return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
         '''
-        currentInvestmentData = FileManager.data_from_file_json(self.currentInvestmentsFileName, False, self.log, self.toConsole)
+        currentInvestmentData = FileManager.data_from_file_json(self.currentInvestmentsFileName, False, self.log)
         if currentInvestmentData is not None:
             msg1 = f'Se ha encontrado un fichero de datos de inversiones actuales": "{self.currentInvestmentsFileName}"'
-            if self.toLog: self.log.info(msg1)
-            if self.toConsole: print(msg1)
+            self.log.info(self.cmd(msg1))
             if type(currentInvestmentData) != Dict:
-                msg1 = 'Error: La estructura del fichero de datos de inversiones actuales no es correcta.'
-                if self.toLog: self.log.error(msg1)
-                if self.toConsole: print(msg1)
+                self.log.error(self.cmd('Error: La estructura del fichero de datos de inversiones actuales no es correcta.'))
                 return False
             if len(currentInvestmentData) == 0:
-                msg1 = 'El fichero de datos de inversiones actuales no contiene datos.'
-                if self.toLog: self.log.error(msg1)
-                if self.toConsole: print(msg1)
+                self.log.error(self.cmd('El fichero de datos de inversiones actuales no contiene datos.'))
                 return True
             else:
-                msg1 = f'Cantidad de inversiones actuales: {len(currentInvestmentData)}'
-                if self.toLog: self.log.error(msg1)
-                if self.toConsole: print(msg1)
+                self.log.error(self.cmd(f'Cantidad de inversiones actuales: {len(currentInvestmentData)}'))
             for index in currentInvestmentData.keys():
                 investment = currentInvestmentData[index]
                 if self.is_valid_current_investment_structure(investment): 
@@ -502,20 +393,14 @@ class TrendTaker():
                     msg1 = f'Inversion actual en {investment["symbol"]}'
                     msg2 = f'cantidad comprada: {investment["amountAsBase"]} {base}'
                     msg3 = f'precio de compra: {investment["initialPrice"]} {quote}'
-                    if self.toLog: 
-                        self.log.info(f'{msg1} {msg2} {msg3}')
-                    if self.toConsole: 
-                        print(f'\n{msg1}\n   {msg2}\n   {msg3}\n')
+                    self.log.info(f'{msg1} {msg2} {msg3}')
+                    self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n')
 
                     self.currentInvestments[symbolId] = investment
                     #self.initialExecutionDateTimeAsSeconds = data["initialDateTimeAsSeconds"] # debe quedarse con el mas antiguo.
-                    msg1 = f'Se han cargado los datos de la iversion actual en {symbolId}.'
-                    if self.toLog: self.log.info(msg1)
-                    if self.toConsole: print(msg1)
+                    self.log.info(self.cmd(f'Se han cargado los datos de la iversion actual en {symbolId}.'))
                 else:
-                    msg1 = f'Error en los datos de la inversion en el mercado {symbolId}'
-                    if self.toLog: self.log.error(msg1)
-                    if self.toConsole: print(msg1)
+                    self.log.error(self.cmd(f'Error en los datos de la inversion en el mercado {symbolId}'))
         return False
     
         
@@ -537,18 +422,14 @@ class TrendTaker():
         Report.prepare_directory(DIRECTORY_GRAPHICS)
         
         if self.create_handler_of_logging():
-            msg1 = f'Iniciando bot: {self.botId}'
-            if self.toLog: self.log.info(msg1)
-            if self.toConsole: print(f'\n{msg1}')
-            self.core = TrendTakerCore(self.exchangeId, self.apiKey, self.secret, self.log, self.toLog, self.toConsole)
-            msg1 = f'exchangeId: {self.exchangeId}'
-            if self.toLog: self.log.info(msg1)
-            if self.toConsole: print(msg1)
+            self.log.info(self.cmd(f'Iniciando bot: {self.botId}', '\n'))
+            self.core = TrendTakerCore(self.exchangeId, self.apiKey, self.secret, self.log)
+            self.log.info(self.cmd(f'exchangeId: {self.exchangeId}'))
             self.config.log = self.log
             self.config.core = self.core
             
             if self.core.exchangeInterface.check_exchange_methods(True):
-                self.ledger = Ledger(self.botId, DIRECTORY_LEDGER, self.log, self.toLog, self.toConsole)            
+                self.ledger = Ledger(self.botId, DIRECTORY_LEDGER, self.log)            
                 if self.config.load():
                     time.sleep(1)
                     if self.get_current_balance():
@@ -568,21 +449,17 @@ class TrendTaker():
                                     msg1 = 'Los calculos de profit seran realizados con los datos de la iversion actual en curso.'                                
                                     msg2 = 'El balance libre al inicio de la iversion actual es:'
                                     msg3 = f'El balance libre de {quote} al inicio de la iversion actual es: {round(quoteBalance, 10)}'
-                                    if self.toLog: 
-                                        self.log.info(msg1)
-                                        self.log.info(f"{msg2} {str(self.initialBalance)}")
-                                        self.log.info(msg3)
-                                    if self.toConsole: 
-                                        print(f"{msg1}")                                
-                                        TrendTakerCore.show_object(self.initialBalance['free'], f"\n{msg2}") 
-                                        print(f"\n{msg3}")         
-                                        time.sleep(1)       
+                                    self.log.info(msg1)
+                                    self.log.info(f"{msg2} {str(self.initialBalance)}")
+                                    self.log.info(msg3)
+                                    print(f"{msg1}")                                
+                                    TrendTakerCore.show_object(self.initialBalance['free'], f"\n{msg2}") 
+                                    print(f"\n{msg3}")         
+                                    time.sleep(1)       
                                     time.sleep(1)
                                     '''           
                                 return True
-        msg1 = 'Terminado: No se puede continuar.'
-        if self.toLog: self.log.info(msg1)
-        if self.toConsole: print(msg1)
+        self.log.info(self.cmd('Terminado: No se puede continuar.'))
         return False
 
 
@@ -594,33 +471,29 @@ class TrendTaker():
         Nota: Esto se hace para comprobar el funcionamiento de las compras y ventas.\n
         return: True si logra ejecutar las ordenes de compra y venta correctamente. False si ocurre error.
         '''
-        if DEBUG_MODE["onlyBuyAndSell"] is not None:
-            self.invest_in(str(DEBUG_MODE["onlyBuyAndSell"]))
+        marketId = DEBUG_MODE.get("onlyBuyAndSell", None)
+        if marketId is not None:
+            print('satiago', marketId, marketId is not None)
+            self.invest_in(str(marketId))
             time.sleep(1)
-            self.close_current_investment()  
-            if self.toLog: self.log.info('Terminado')
-            if self.toConsole: print('Terminado')
+            self.close_investment()  
+            self.log.info(self.cmd('Terminado'))
             return True
         return False
             
 
-    def only_invest_in(self):
+    def only_invest(self):
         '''
         Hace prueba de invertir en un mercado introduciendo una orden de compra con takeProfit y stopLoss.\n
-        Si en DEBUG_MODE esta establecido el parametro el "onlyBuyAndSell", se ejecuta una orden de compra 
-        con los parametros de la configuracion y luego ejecutar una venta para salir de la inversion y terminar.\n
+        Si en DEBUG_MODE esta establecido el parametro el "onlyInvestIn", se ejecuta una orden de compra 
+        con los parametros de la configuracion, con su takeProfit y stopLoss.\n
         Nota: Esto se hace para comprobar el funcionamiento de las compras y ventas.\n
         return: True si logra ejecutar las ordenes de compra y venta correctamente. False si ocurre error.
         '''
-        if DEBUG_MODE["onlyInvestIn"] is not None:
-            marketId = str(DEBUG_MODE["onlyInvestIn"])
-            takeProfitPercent = 1
-            stopLossPercent = -1
-            self.invest_in(str(DEBUG_MODE["onlyInvestIn"]))
-            time.sleep(1)
-            self.close_current_investment()  
-            if self.toLog: self.log.info('Terminado')
-            if self.toConsole: print('Terminado')
+        marketId = DEBUG_MODE.get("onlyInvestIn", None)
+        if marketId is not None:
+            self.invest_in(str(marketId), 1, -1, 24)
+            self.log.info(self.cmd('Terminado'))
             return True
         return False
             
@@ -633,15 +506,11 @@ class TrendTaker():
         return: True si logra cerrar correctamente las inversiones abiertas. False si ocurre error.
         '''
         if self.config.data.get("forceCloseInvestmentAndExit", False):
-            msg1 = '\nATENCION: La configuracion del bot indica que deben cerrarse todas las inversiones inmediatamente.'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd('ATENCION: La configuracion del bot indica que deben cerrarse todas las inversiones inmediatamente.', '\n'))
             if len(self.currentInvestments) > 0:
                 for symbolId in self.currentInvestments.keys():
-                    self.close_current_investment(symbolId)
-            msg1 = 'Terminado: Se ha finalizado la ejecucion.'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+                    self.close_investment(symbolId)
+            self.log.error(self.cmd('Terminado: Se ha finalizado la ejecucion.'))
             return True
         return False
         
@@ -657,9 +526,11 @@ class TrendTaker():
             return False
         if self.only_buy_and_sell():
             return True
+        if self.only_invest():
+            return True
         if self.force_close_investment_and_exit():
             return True
-        report = Report(self.core, self.botId, self.exchangeId, self.log, self.toLog, self.toConsole, DIRECTORY_GRAPHICS, "png")
+        report = Report(self.core, self.botId, self.exchangeId, self.log, DIRECTORY_GRAPHICS, "png")
         validTickers = self.core.get_ordered_and_filtered_tickers(self.listOfValidMarketsId, self.config.data)
         if validTickers is None: 
             return False
@@ -669,8 +540,7 @@ class TrendTaker():
         for marketData in orderedMarkets:
             symbolId = marketData["symbolId"]
             msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(float(marketData['tickerData']['percentage']), 2)} %"
-            if self.toConsole: print(msg1)
-            if self.toLog: self.log.info(msg1)                                
+            self.log.info(self.cmd(msg1))                                
             lastPrice = float(marketData["tickerData"]["last"])
             amountToInvestAsQuote = float(self.config.data.get("amountToInvestAsQuote", 10))
             amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
@@ -689,22 +559,19 @@ class TrendTaker():
                     # Si el mercado potencial seleccionado es el mismo en el que ya se ha invertido, no se hace nada y se procede a continuar verificando el estado de esa inversion.
                     pass
                     # Si ha superado el tiempo especifico para la imversio, deve termimarlo
-                    #if not self.close_current_investment(symbolId):   
+                    #if not self.close_investment(symbolId):   
                     #    category = "closedInvest"  
                 report.append_market_data(fileName, marketData["metrics"], category)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
         if len(self.currentInvestments) == 0:
-            msg1 = 'SIN INVERTIR: No se han encontrado mercados favorables.'
-            if self.toLog: self.log.info(msg1)
-            if self.toConsole: print(msg1)
-        if self.toLog: self.log.info('Terminado')
-        if self.toConsole: print('Terminado')
+            self.log.info(self.cmd('SIN INVERTIR: No se han encontrado mercados favorables.'))
+        self.log.info(self.cmd('Terminado'))
         return True
 
 
 if __name__ == "__main__":
     credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').read())
     #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
-    bot = TrendTaker('TrendTaker1', credentials['exchange'], credentials['key'], credentials['secret'], True, True)
+    bot = TrendTaker('TrendTaker1', credentials['exchange'], credentials['key'], credentials['secret'])
     bot.execute()    

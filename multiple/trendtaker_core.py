@@ -1,9 +1,9 @@
 
 import time
 import json
-import random
 from exchange_interface import *
 from market_metrics import *
+from basics import *
 from typing import Any, Dict, Literal, Optional, List
 
 MarketData = Dict
@@ -16,14 +16,12 @@ AmountLimit = Literal["min", "max"]
 
 INDENT = str("   ")
 
-class TrendTakerCore():
+class TrendTakerCore(Basics):
 
-    def __init__(self, exchangeId, apiKey, secret, log=None, toLog=True, toConsole=False):
+    def __init__(self, exchangeId, apiKey, secret, log=None):
         self.exchangeId = exchangeId
         self.log = log  
-        self.toLog = toLog
-        self.toConsole = toConsole
-        self.exchangeInterface = ExchangeInterface(exchangeId, apiKey, secret, log=log, toLog=toLog, toConsole=toConsole)
+        self.exchangeInterface = ExchangeInterface(exchangeId, apiKey, secret, log=log)
         self.metrics = MarketMetrics()
         self.validMarkets = None
         self.orderableMarket = None
@@ -124,8 +122,7 @@ class TrendTakerCore():
                 return False
         except Exception as e:
             msg1 = f"Error: Validando el mercado {dataMarket['symbol'] if dataMarket is not None else ''}. Exception: {str(e)}"
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(msg1))
             return False
         return True
 
@@ -164,8 +161,7 @@ class TrendTakerCore():
                             validMarkets.append(symbol)
         except Exception as e:
             msg1 = f"Error: Obteniendo la lista de mercados validos. Exception: {str(e)}"
-            if self.toLog: self.log.exception(msg1)
-            if self.toConsole: print(msg1)
+            self.log.exception(self.cmd(msg1))
             return None
         return validMarkets
 
@@ -238,9 +234,7 @@ class TrendTakerCore():
                     tickerData = tickers[marketId]
                     if self.is_valid_ticker(tickerData, configuration):
                         selected.append(tickerData)
-            msg1 = f'Cantidad de mercados creciendo en las ultimas 24 horas: {len(selected)}'
-            if self.toLog: self.log.info(msg1)
-            if self.toConsole: print(f'{msg1}\n')
+            self.log.info(self.cmd(f'Cantidad de mercados creciendo en las ultimas 24 horas: {len(selected)}', '', '\n'))
             try:
                 preselected = configuration.get("preselected", [])
                 result = sorted(
@@ -253,19 +247,15 @@ class TrendTakerCore():
                 )
                 result = result[0:configuration.get("maxTickersToSelect", 100)]
                 for ticker in result:
-                    print(f'{ticker["symbol"]} creciendo en las ultimas 24 horas: {ticker["percentage"]}')
+                    self.cmd(f'{ticker["symbol"]} creciendo en las ultimas 24 horas: {ticker["percentage"]}')
                     time.sleep(0.1)
-                print('\n')
+                self.cmd('\n')
                 return result
             except Exception as e:
-                msg1 = f"Error: Ordenando los tickers filtrados de mercados validos."
-                if self.toLog: self.log.exception(f'{msg1} Exception: {str(e)}')
-                if self.toConsole: print(f'{msg1}\n')
+                self.log.exception(f'{self.cmd("Error: Ordenando los tickers filtrados de mercados validos.")} Exception: {str(e)}')
                 return None
         except Exception as e:
-            msg1 = f"Error: Leyendo los tickers y filtrando mercados validos."
-            if self.toLog: self.log.exception(f'{msg1} Exception: {str(e)}')
-            if self.toConsole: print(f'{msg1}\n')
+            self.log.exception(f'{self.cmd("Error: Leyendo los tickers y filtrando mercados validos.")} Exception: {str(e)}')
             return None
         
 
@@ -306,23 +296,16 @@ class TrendTakerCore():
                     if self.is_potential_market(market, configuration):
                         marketsData.append(market)
                         msg1 = f"{msg1}  [POTENCIAL]"
-                    if self.toLog: self.log.error(msg1)
-                    if self.toConsole: print(msg1)
+                    self.log.error(self.cmd(msg1))
                     time.sleep(0.1)
-            msg1 = f'Se han preseleccionado {len(marketsData)} mercados con ganancia potencial.'
-            if self.toLog: self.log.info(msg1)
-            if self.toConsole: print(f'{msg1}\n')
+            self.log.info(self.cmd(f'Se han preseleccionado {len(marketsData)} mercados con ganancia potencial.', '', '\n'))
             try:
                 return sorted(marketsData, key=lambda x: float(x["metrics"]["potential"]), reverse=True)
             except Exception as e:
-                msg1 = f"Error: Ordenando la lista de mercados seleccionados."
-                if self.toLog: self.log.exception(f'{msg1} Exception: {str(e)}')
-                if self.toConsole: print(msg1)
+                self.log.exception(f'{self.cmd("Error: Ordenando la lista de mercados seleccionados.")} Exception: {str(e)}')
                 return None
         except Exception as e:
-            msg1 = f"Error: Obteniendo los datos descriptivos y velas de los mercados validos."
-            if self.toLog: self.log.exception(f'{msg1} Exception: {str(e)}')
-            if self.toConsole: print(msg1)
+            self.log.exception(f'{self.cmd("Error: Obteniendo los datos descriptivos y velas de los mercados validos.")} Exception: {str(e)}')
             return None
     
 
@@ -429,22 +412,14 @@ class TrendTakerCore():
         if amountAsBase < amountMin:
             msg1 = f'   El monto {amountAsBase} {base} es inferior al minimo permitido en el mercado {symbolId}'
             msg2 = f'   Atencion: El monto minimo permitido en {symbolId} es de {amountMin} {base}  ({round(amountMinAsQuote, decimals)} {quote} )'
-            if self.toLog: 
-                self.log.error(msg1)
-                self.log.warning(msg2)
-            if self.toConsole: 
-                print(msg1)
-                print(msg2)
+            self.log.error(self.cmd(msg1))
+            self.log.warning(self.cmd(msg2))
             return False
         elif amountAsBase > amountMax:
             msg1 = f'{INDENT}El monto {amountAsBase} {base} es superior al maximo permitido en el mercado {symbolId}'
             msg2 = f'{INDENT}Atencion: El monto maximo permitido en {symbolId} es de {amountMax} {base}  ({round(amountMaxAsQuote, decimals)} {quote} )'
-            if self.toLog: 
-                self.log.error(msg1)
-                self.log.warning(msg2)
-            if self.toConsole: 
-                print(msg1)
-                print(msg2)
+            self.log.error(self.cmd(msg1))
+            self.log.warning(self.cmd(msg2))
             return False
         else:
             return True
@@ -511,35 +486,27 @@ class TrendTakerCore():
                 order = self.exchangeInterface.execute_market_sell(symbol, amount)
         if order is not None:
             orderId = order["id"]
-            if self.toLog: 
-                self.log.info(f'Orden de mercado creada: {str(order)}')
-            if self.toConsole: 
-                print(f'\nOrden de mercado creada: {orderId}')
-                print(f'{side.upper()} {self.decimal_string(amount)} en el mercado {symbol} al precio actual:')
+            self.log.info(f'Orden de mercado creada: {str(order)}')
+            self.cmd(f'\nOrden de mercado creada: {orderId}')
+            self.cmd(f'{side.upper()} {self.decimal_string(amount)} en el mercado {symbol} al precio actual:')
             while order is not None: 
-                if self.toLog: 
-                    self.log.info(f'estado: {str(order)}')
-                if self.toConsole: 
-                    print('{}estado: {}   llenado: {}   remanente: {}   precio promedio: {}   fee:{}'.format(
-                        INDENT,
-                        order["status"],
-                        self.decimal_string(order["filled"]),
-                        self.decimal_string(order["remaining"]),
-                        self.decimal_string(order["average"]),
-                        self.decimal_string(order["fee"]["cost"])
-                    ))
+                self.log.info(f'estado: {str(order)}')
+                self.cmd('{}estado: {}   llenado: {}   remanente: {}   precio promedio: {}   fee:{}'.format(
+                    INDENT,
+                    order["status"],
+                    self.decimal_string(order["filled"]),
+                    self.decimal_string(order["remaining"]),
+                    self.decimal_string(order["average"]),
+                    self.decimal_string(order["fee"]["cost"])
+                ))
                 if order['status'] != "open":
                     break
                 time.sleep(1)
                 order = self.exchangeInterface.get_order(orderId, symbol)
             return order
         else:
-            msg1 = f'Error creando orden de mercado {side}.'
-            if self.toLog: self.log.error(msg1)
-            if self.toConsole: print(msg1)
+            self.log.error(self.cmd(f'Error creando orden de mercado {side}.'))
             return None
-
-
         
 
 # Codigo de ejemplo y test.
@@ -548,3 +515,4 @@ if __name__ == "__main__":
     core.load_markets()
     validMarketsIdList = core.get_list_of_valid_markets()
     print(validMarketsIdList)
+
