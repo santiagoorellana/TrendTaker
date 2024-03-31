@@ -2,26 +2,8 @@
 import time
 import ccxt # type: ignore
 from basics import *
-from typing import List, Any, Dict, Union, Optional, Literal
 import logging
 
-
-Candle = List[Union[int, float]]
-ListOfCandles = List[Candle]
-Ticker = Dict
-ListOfTickers = List[Ticker]
-MarketId = str
-Market = Dict
-ListOfMarkets = List[Market]
-ListOfMarketsId = List[MarketId]
-CurrencyId = str
-Currency = Dict
-ListOfCurrencies = List[Currency]
-ListOfCurrenciesId = List[CurrencyId]
-Balance = Dict
-Order = Dict
-PrecisionType = Literal["price", "amount", "cost"]
-Side = Literal["buy", "sell"]
 
 CANDLE_TIMESTAMP = 0
 CANDLE_OPEN = 1
@@ -137,7 +119,7 @@ class ExchangeInterface(Basics):
         return False
         
 
-    def get_markets(self) -> ListOfMarkets:
+    def get_markets(self) -> DictOfMarkets:
         '''
         Devuelve los mercados del exchange que ya fueron cargados previamente.
         Return: Lista de los mercados del exchange. Si no hay, devuelve None.
@@ -145,7 +127,7 @@ class ExchangeInterface(Basics):
         return self.exchange.markets
         
 
-    def get_currencies(self) -> ListOfCurrencies:
+    def get_currencies(self) -> DictOfCurrencies:
         '''
         Devuelve las currencies del exchange que ya fueron cargadas previamente.
         Return: Lista de las currencies del exchange. Si no hay, devuelve None.
@@ -169,7 +151,7 @@ class ExchangeInterface(Basics):
         return None
                 
 
-    def get_tickers(self, symbols:Optional[ListOfMarketsId]=None) -> Optional[ListOfTickers]:
+    def get_tickers(self, symbols:Optional[ListOfMarketsId]=None) -> Optional[DictOfTickers]:
         '''
         Carga la lista de tickers de todos los mercados del exchange.
         Si se produce un error, lo intenta nuevamente varias veces antes de fallar.
@@ -355,6 +337,6 @@ class ExchangeInterface(Basics):
             
 # Codigo de ejemplo y test.
 if __name__ == "__main__":
-    x = ExchangeInterface('hitbtc', "", "")
+    x = ExchangeInterface('hitbtc', "", "", 'kkk')
     import json
     print(json.dumps(x.get_tickers(["BTC/USDT"]), indent=4))

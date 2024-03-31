@@ -1,21 +1,10 @@
 
 import time
-import json
 from exchange_interface import *
 from market_metrics import *
 from basics import *
-from typing import Any, Dict, Literal, Optional, List
-import logging
+from typing import Dict, Literal, Optional, List
 from validations import Validations
-
-
-MarketData = Dict
-Filters = Dict
-ListOfMarketData = List[MarketData]
-ComparisonCondition = Literal["above", "below"]
-Slice = Literal["whole", "lastHalf", "lastQuarter"]
-AmountLimit = Literal["min", "max"]
-
 
 class TrendTakerCore(Validations, Basics):
 
@@ -47,7 +36,7 @@ class TrendTakerCore(Validations, Basics):
 
     def get_list_of_valid_markets(
             self, 
-            quoteCurrency: CurrencyId = 'USDT', 
+            quoteCurrency: CurrencyId, 
             blackList: Optional[ListOfCurrenciesId] = None
         ) -> Optional[ListOfMarketsId]:
         '''
@@ -84,7 +73,11 @@ class TrendTakerCore(Validations, Basics):
         return validMarkets
 
 
-    def get_ordered_and_filtered_tickers(self, validMakets:ListOfMarketsId, configuration:Dict) -> Optional[ListOfTickers]:
+    def get_ordered_and_filtered_tickers(
+            self, 
+            validMakets:Optional[ListOfMarketsId], 
+            configuration:Optional[ConfigurationData]
+        ) -> Optional[ListOfTickers]:
         '''
         Dada una lista de mercados (symols) validos, pide al exchange todos los tickers y devuelve solo los que 
         pertenecen a mercados validos, y que cumplen las condiciones de seleccion del filtro.\n
@@ -93,14 +86,17 @@ class TrendTakerCore(Validations, Basics):
         param configuration: Objeto con la configuracion del algoritmo.
         return: Lista filtrada con los tickers recientes, validos y crecientes. None si ha ocurrido un error.
         '''
+        if validMakets is None or configuration is None:
+            return None
         selected = []
         try:
             tickers = self.exchangeInterface.get_tickers()
-            for marketId in validMakets:
-                if marketId in tickers:
-                    tickerData = tickers[marketId]
-                    if self.is_valid_ticker(tickerData, configuration):
-                        selected.append(tickerData)
+            if tickers is not None:
+                for marketId in validMakets:
+                    if marketId in tickers:
+                        tickerData = tickers[marketId]
+                        if self.is_valid_ticker(tickerData, configuration):
+                            selected.append(tickerData)
             self.log.info(self.cmd(f'Cantidad de mercados creciendo en las ultimas 24 horas: {len(selected)}', '', '\n'))
             try:
                 preselected = configuration.get("preselected", [])
@@ -262,8 +258,8 @@ class TrendTakerCore(Validations, Basics):
 
 # Codigo de ejemplo y test.
 if __name__ == "__main__":
-    core = TrendTakerCore('hitbtc', '', '')
+    core = TrendTakerCore('TrendTaker1', 'hitbtc', '', '')
     core.load_markets()
-    validMarketsIdList = core.get_list_of_valid_markets()
+    validMarketsIdList = core.get_list_of_valid_markets('USDT', None)
     print(validMarketsIdList)
 

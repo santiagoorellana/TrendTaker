@@ -6,7 +6,6 @@ Segment = Literal['whole', 'half1', 'half2', 'quarter1', 'quarter2', 'quarter3',
 Metrics = Dict
 MetricsSummary = Dict
 
-
 class MarketMetrics():
     
     ####################################################################################################
@@ -117,7 +116,7 @@ class MarketMetrics():
     ####################################################################################################
     
     @staticmethod
-    def ticker_spread(tickerData: Ticker) -> Optional[float]:
+    def ticker_spread(tickerData: Ticker) -> float:
         '''
         Calcula el spread del ticker, en porciento
         param tickerData: Objeto ticker obtenido del exchange, mediante la librería CCXT.
@@ -131,7 +130,7 @@ class MarketMetrics():
     
 
     @staticmethod
-    def ticker_profit_over_amplitude(tickerData: Ticker) -> Optional[float]:
+    def ticker_profit_over_amplitude(tickerData: Ticker) -> float:
         ''' 
         Devuelve la realacion entre el profit (percent) y la maxima amplitud (high - low) en porciento.
         Cada ticker que se recibe mediante la librería ccxt, tiene las estadisticas de las ultimas 24 
@@ -141,7 +140,7 @@ class MarketMetrics():
         es el crecimiento de ese mercado.\n
         param tickerData: Objeto ticker obtenido del exchange, mediante la librería ccxt.
         return: Devuelve la realacion entre el delta (percent) y la maxima amplitud (high - low) en porciento. 
-                Si ocurre un error, devuelve None.
+                Si ocurre un error, devuelve cero.
         '''
         try:
             delta = MarketMetrics._delta(tickerData['low'], tickerData['high'])

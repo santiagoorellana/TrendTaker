@@ -10,9 +10,6 @@ from basics import *
 import logging
 
 
-Formats = Literal["png", "jpg", "jpeg", "webp", "svg", "pdf"]
-Category = Literal["potentialMarket", "openInvest", "closedInvest"]
-
 DIRECTORY_GRAPHICS = "./graphics/"
 
 class Report(Basics):

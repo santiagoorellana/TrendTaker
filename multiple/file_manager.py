@@ -8,7 +8,7 @@ from logging import Logger
 class FileManager(Basics):
 
     @staticmethod
-    def data_to_file_text(self, line:str, fileName:str, log:Logger=None) -> bool:
+    def data_to_file_text(line:str, fileName:str, log:Optional[Logger]=None) -> bool:
         '''
         Escribe en un fichero de texto la cadena de texto.
         param line: Cadena que contiene el texto.
@@ -29,7 +29,7 @@ class FileManager(Basics):
 
 
     @staticmethod
-    def data_to_file_json(data:Any, fileName:str, log:Logger=None) -> bool:
+    def data_to_file_json(data:Any, fileName:str, log:Optional[Logger]=None) -> bool:
         '''
         Escribe en un fichero JSON los datos del diccionario.
         param data: Diccionario que contiene los datos.
@@ -51,7 +51,7 @@ class FileManager(Basics):
         
     
     @staticmethod 
-    def data_from_file_json(fileName:str, report:bool=True, log:Logger=None) -> Optional[Any]:
+    def data_from_file_json(fileName:str, report:bool=True, log:Optional[Logger]=None) -> Optional[Any]:
         '''
         Lee desde un fichero JSON los datos del diccionario.
         param fileName: Nombre y ruta del fichero que se debe leer.

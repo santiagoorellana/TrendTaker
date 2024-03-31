@@ -5,10 +5,6 @@ from market_metrics import MarketMetrics
 import logging
 from basics import *
 
-ComparisonCondition = Literal["above", "below"]
-AmountLimit = Literal["min", "max"]
-
-
 class Validations(Basics):
     
     def __init__(self, botId:str):

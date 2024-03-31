@@ -1,5 +1,4 @@
 
-from trendtaker_core import *
 from file_manager import *
 from basics import *
 import logging
@@ -40,10 +39,9 @@ DEFAULT_CONFIGURATION = {
 
 class Configuration(Basics):
 
-    def __init__(self, botId:str, core:Any=None):
+    def __init__(self, botId:str):
         self.botId = botId
-        self.core = core
-        self.data = DEFAULT_CONFIGURATION
+        self.data:Dict = DEFAULT_CONFIGURATION
         self.log = logging.getLogger(botId)
 
 
@@ -67,7 +65,7 @@ class Configuration(Basics):
                 self.log.error(self.cmd('Debe revisar o editar el fichero de configuracion antes de volver a ejecutar el bot.'))
                 return False
             self.log.info(f"La configuracion actual es: {str(self.configuration)}")
-            TrendTakerCore.show_object(self.configuration, "\nLa configuracion actual es:") 
+            Basics.show_object(self.configuration, "\nLa configuracion actual es:") 
             return True
         except Exception as e:
             self.log.exception(self.cmd(f'Error: No se pudo establecer la configuracion del bot. Exception: {str(e)}'))

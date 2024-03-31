@@ -65,13 +65,12 @@ class TrendTaker(Basics):
         self.apiKey = apiKey
         self.secret = secret
         
-        self.secondsToNextCheck = 5 #60
-        self.listOfValidMarketsId = None
-        self.config = Configuration(botId, None)
-        self.initialBalance = {}
-        self.currentBalance = None
-        self.currentInvestments = {}
-        self.totalFeeAsQuote = 0
+        self.listOfValidMarketsId:Optional[ListOfMarketsId] = None
+        self.config = Configuration(botId)
+        self.initialBalance:Balance = {}
+        self.currentBalance:Optional[Balance] = None
+        self.currentInvestments:CurrentInvestments = {}
+        self.totalFeeAsQuote:float = 0
         
     
     def create_handler_of_logging(self) -> bool:
@@ -142,7 +141,7 @@ class TrendTaker(Basics):
         return: True si logra cargar los datos de mercado. False si ocurre error o no los carga.
         '''
         self.listOfValidMarketsId = self.core.get_list_of_valid_markets(
-            str(self.config.data['currencyQuote']),
+            str(self.config.data.get('currencyQuote', 'USDT')),
             self.config.data.get("blackList", None)
         )
         if self.listOfValidMarketsId is None:
@@ -161,10 +160,10 @@ class TrendTaker(Basics):
     def invest_in(
             self, 
             symbolId:MarketId, 
-            amountAsBase:float=None, 
-            profitPercent:float=None, 
-            maxLossPercent:float=None, 
-            maxHours:float=None
+            amountAsBase:float, 
+            profitPercent:Optional[float]=None, 
+            maxLossPercent:Optional[float]=None, 
+            maxHours:Optional[float]=None
         ) -> bool:
         '''
         Abre una inversion nueva comprando el activo.\n
@@ -184,9 +183,9 @@ class TrendTaker(Basics):
                 self.currentBalance = self.core.exchangeInterface.get_balance()
                 if self.currentBalance is None:
                     self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
-                    balanceQuote = None
+                    balanceQuote = float(0)
                 else:
-                    balanceQuote = self.currentBalance["free"][quote]
+                    balanceQuote = float(self.currentBalance["free"][quote])
                 
                 lastPrice = float(ticker.get("last", 0))
                 if lastPrice > 0:
@@ -195,7 +194,7 @@ class TrendTaker(Basics):
                         
                         # aqui se deberia comprobar si el amount a invertir supera al balance disponible.
                         
-                        order = self.core.execute_market('buy', symbolId, amountAsBase, DEBUG_MODE["simulateOrderExecution"])                        
+                        order = self.core.execute_market('buy', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrderExecution", False)))                        
                         if order is not None:                        
                             self.currentInvestments[symbolId] = {
                                 "symbol": symbolId,
@@ -249,24 +248,24 @@ class TrendTaker(Basics):
                     self.currentBalance = self.core.exchangeInterface.get_balance()
                     if self.currentBalance is None:
                         self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
-                        balanceQuote = None
+                        balanceQuote = float(0)
                     else:
-                        balanceQuote = self.currentBalance["free"][quote]
+                        balanceQuote = float(self.currentBalance["free"][quote])
                     
                     amountAsBase = float(investment['amountAsBase'])
                     lastPrice = float(ticker.get("last", 0))
                     if lastPrice > 0:
                         initialPrice = float(investment['initialPrice'])
 
-                        order = self.core.execute_market('sell', symbolId, amountAsBase, DEBUG_MODE["simulateOrderExecution"])
+                        order = self.core.execute_market('sell', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrderExecution", False)))
                         if order is not None:                        
                             try:
                                 profit = round((float(order["average"]) - initialPrice) / initialPrice * 100, 2)
                             except:
                                 profit = None
                             try:
-                                current = float(self.currentBalance['free'][quote])
                                 initial = float(self.initialBalance['free'][quote])
+                                current = float(self.currentBalance['free'][quote]) if self.currentBalance is not None else initial
                                 profitTotal = round((current - initial) / initial * 100, 2)
                             except:
                                 profitTotal = None
@@ -326,7 +325,7 @@ class TrendTaker(Basics):
                 self.log.error(self.cmd(f'Cantidad de inversiones actuales: {len(currentInvestmentData)}'))
             for index in currentInvestmentData.keys():
                 investment = currentInvestmentData[index]
-                if self.is_valid_current_investment_structure(investment): 
+                if self.core.is_valid_current_investment_structure(investment): 
                     symbolId = investment["symbol"]
                     base = self.core.exchangeInterface.base_of_symbol(investment["symbol"])
                     quote = self.core.exchangeInterface.quote_of_symbol(investment["symbol"])                                
@@ -365,7 +364,6 @@ class TrendTaker(Basics):
             self.log.info(self.cmd(f'Iniciando bot: {self.botId}', '\n'))
             self.core = TrendTakerCore(self.botId, self.exchangeId, self.apiKey, self.secret)
             self.log.info(self.cmd(f'exchangeId: {self.exchangeId}'))
-            self.config.core = self.core
             
             if self.core.exchangeInterface.check_exchange_methods(True):
                 self.ledger = Ledger(self.botId, DIRECTORY_LEDGER)            

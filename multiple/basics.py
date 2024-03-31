@@ -3,9 +3,50 @@ import time
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import regex # type: ignore
-from typing import Any
+from typing import List, Any, Dict, Union, Literal, Optional
 
 INDENT = str("   ")
+
+# Definiciones de datos de la libreria CCXT
+
+Candle = List[Union[int, float]]
+ListOfCandles = List[Candle]
+
+Ticker = Dict
+ListOfTickers = List[Ticker]
+DictOfTickers = Dict
+
+MarketId = str
+ListOfMarketsId = List[MarketId]
+Market = Dict
+ListOfMarkets = List[Market]
+DictOfMarkets = Dict
+
+CurrencyId = str
+ListOfCurrenciesId = List[CurrencyId]
+Currency = Dict
+ListOfCurrencies = List[Currency]
+DictOfCurrencies = Dict
+
+Balance = Dict
+Order = Dict
+
+PrecisionType = Literal["price", "amount", "cost"]
+Side = Literal["buy", "sell"]
+AmountLimit = Literal["min", "max"]
+
+# Definiciones de datos propios del TrendTaker
+
+CurrentInvestments = Dict
+ConfigurationData = Dict
+Filters = Dict
+MarketData = Dict
+ListOfMarketData = List[MarketData]
+ComparisonCondition = Literal["above", "below"]
+Slice = Literal["whole", "lastHalf", "lastQuarter"]
+Category = Literal["potentialMarket", "openInvest", "closedInvest"]
+Formats = Literal["png", "jpg", "jpeg", "webp", "svg", "pdf"]
+
 
 class Basics():
     
