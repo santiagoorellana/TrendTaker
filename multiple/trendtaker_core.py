@@ -213,12 +213,24 @@ class TrendTakerCore(Validations, Basics):
             return None  
             
             
-    def execute_market(self, side:Side, symbol:MarketId, amount:float, simulated:bool=True) -> Optional[Order]:
+    def execute_market(
+            self, 
+            side:Side, 
+            symbol:MarketId, 
+            amount:float, 
+            takeProfitPrice:Optional[float]=None, 
+            stopLossPrice:Optional[float]=None,
+            maxHours:Optional[float]=None, 
+            simulated:bool=True
+        ) -> Optional[Order]:
         '''
         Ejecuta una orden a precio de mercado.
         param side: Tipo de operacion "buy" o "sell".
         param symbol: Identificador del mercado en el que se debe hacer la operacion.
         param amount: Cantidad de currency base que se va a operar.
+        param takeProfitPrice: Precio en el cual se debe ejecutar la venta para obtener ganancias.
+        param stopLossPrice: Precio en el cual se debe vender para detener las perdidas.
+        param maxHours: Cantidad maxima de horas que se puede poseer el activo. 
         param simulated: En True indica que la operacion solo se debe simular.
         return: Devuelve un Dict que contiene los datos del resultado de la orden. 
                 Si la operacion es simulada, devuelve un Dict con datos ficticios.
@@ -226,11 +238,16 @@ class TrendTakerCore(Validations, Basics):
         '''
         if simulated: 
             order = self.create_simulated_order(side, symbol, amount) 
-        else:       
+        else:   
+            params = {}
+            if takeProfitPrice is not None:
+                params["takeProfit"] = { 'type': 'market', 'triggerPrice': takeProfitPrice }                
+            if stopLossPrice is not None:
+                params["stopLoss"] = { 'type': 'market', 'triggerPrice': stopLossPrice }                
             if side == "buy":
-                order = self.exchangeInterface.execute_market_buy(symbol, amount)
+                order = self.exchangeInterface.execute_market_buy(symbol, amount, params)
             else:
-                order = self.exchangeInterface.execute_market_sell(symbol, amount)
+                order = self.exchangeInterface.execute_market_sell(symbol, amount, params)
         if order is not None:
             orderId = order["id"]
             self.log.info(f'Orden de mercado creada: {str(order)}')

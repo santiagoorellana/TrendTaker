@@ -5,6 +5,7 @@ from market_metrics import MarketMetrics
 import logging
 from basics import *
 
+
 class Validations(Basics):
     
     def __init__(self, botId:str):

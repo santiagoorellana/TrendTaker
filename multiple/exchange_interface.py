@@ -258,12 +258,13 @@ class ExchangeInterface(Basics):
             return value
         
         
-    def execute_market_buy(self, symbol:MarketId, amountAsBase:float) -> Optional[Order]:
+    def execute_market_buy(self, symbol:MarketId, amountAsBase:float, params:Dict) -> Optional[Order]:
         '''
         Ejecuta una orden de compra a precio de mercado.
         param symbol: Identificador del mercado donde se debe ejecutar la compra.
         param amountAsBase: Cantidad de currecy base que se debe comprar.
-        return: 
+        param params: Otros parametros que se le pasan a la orden de compra.
+        return: Objeto con los datos y estado de la orden insertada. Si ocurre error, devuelve None.
         '''
         exceptionMsg = ""
         for i in range(self.insistenceCountMax):
@@ -277,12 +278,13 @@ class ExchangeInterface(Basics):
         return None
         
         
-    def execute_market_sell(self, symbol:MarketId, amountAsBase:float) -> Optional[Order]:
+    def execute_market_sell(self, symbol:MarketId, amountAsBase:float, params:Dict) -> Optional[Order]:
         '''
         Ejecuta una orden de venta a precio de mercado.
         param symbol: Identificador del mercado donde se debe ejecutar la venta.
         param amountAsBase: Cantidad de currecy base que se debe vender.
-        return: 
+        param params: Otros parametros que se le pasan a la orden de venta.
+        return: Objeto con los datos y estado de la orden insertada. Si ocurre error, devuelve None.
         '''
         exceptionMsg = ""
         for i in range(self.insistenceCountMax):

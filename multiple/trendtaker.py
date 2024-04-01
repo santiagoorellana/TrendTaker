@@ -25,36 +25,10 @@ DEFAULT_CURRENT_INVESTMENT = {
 
 
 DEBUG_MODE = {
-    # En True, hace que se ignore el balance insuficiente.
-    # Se hace para comprobar el funcionamiento del bot, sin tener en cuenta el balance.
-    "ignoreInsufficientBalance": True,
-    
-    # En True, hace que las ordenes de compra y venta sean simuladas.
-    # Esto se hace para comprobar el funcionamiento del bot, sin tener 
-    # que enviar ordenes reales al exchange.
-    "simulateOrderExecution": True,     
-    
-    # En True, hace que los mercados sean ordenados aleatoriamente, para 
-    # simular como si los profits estuviesen cambiando constantemente.
-    "randomMarketOrdering": False,
-    
-    # En True, hace que los mercados sean aceptados todos sin verificar su 
-    # liquidez y crecimiento. Esto se hace para comprobar el funcionamiento 
-    # del bot con los datos de los mercados, sin tener que esperar a que 
-    # se encuentre un mercado que realmente sea creciente y liquido.
-    "skipLiquidAndGrowingMarketCheck": True,
-    
-    # Para ejecutar una orden de compra con los parametros de la configuracion
-    # y luego ejecutar una orden de venta para salir de la inversion y terminar. 
-    # Esto se hace para comprobar el funcionamiento de las compras y ventas. 
-    # Para activarlo, se debe poner el identificador del mercado. Ej: "HTH/USDT"
-    # Para desactivarlo, se debe poner None
-    "onlyBuyAndSell": None
+    "ignoreInsufficientBalance": True,  # En True, hace que se ignore el balance insuficiente.
+    "simulateOrderExecution": True,     # En True, hace que las ordenes de compra y venta sean simuladas.    
+    "onlyBuyAndSell": None              # Ejecuta una compra y venta e el mercado especificado. Se desactiva con None.
 }
-# Esto se hace porque utilizar "randomMarketOrdering" o "skipLiquidAndGrowingMarketCheck" 
-# en el mercado con ordenes reales, pues puede causar perdidas de capital.
-if DEBUG_MODE["randomMarketOrdering"] or DEBUG_MODE["skipLiquidAndGrowingMarketCheck"]:
-    DEBUG_MODE["simulateOrderExecution"] = True
 
 
 class TrendTaker(Basics):
@@ -93,6 +67,10 @@ class TrendTaker(Basics):
         return True
 
 
+    ####################################################################################################
+    # METODOS PARA PEDIR DATOS AL EXCHANGE
+    ####################################################################################################
+    
     def get_current_balance(self) -> bool:
         '''
         Obtiene el balance actual de la cuenta y lo guarda en la propiedad "currentBalance" del la clase.
@@ -122,13 +100,6 @@ class TrendTaker(Basics):
             return True
 
 
-    def load_markets(self) -> bool:
-        '''
-        Carga los datos de mercado y sus criptomonedas.\n
-        return: True si logra cargar los datos de mercado. False si ocurre error o no los carga.
-        '''
-        return self.core.load_markets()
-                
                 
     def get_list_of_valid_markets(self) -> bool:
         '''
@@ -156,6 +127,11 @@ class TrendTaker(Basics):
                 return False
             return True
 
+
+
+    ####################################################################################################
+    # METODOS PARA COTROLAR LAS ENTRADAS Y SALIDAS DE LAS INVERSIONES
+    ####################################################################################################
     
     def invest_in(
             self, 
@@ -163,14 +139,18 @@ class TrendTaker(Basics):
             amountAsBase:float, 
             profitPercent:Optional[float]=None, 
             maxLossPercent:Optional[float]=None, 
+            trailingStop:bool=False, 
             maxHours:Optional[float]=None
         ) -> bool:
         '''
         Abre una inversion nueva comprando el activo.\n
+        Permite colocar precios de TakeProfit, StopLoss, TrailingStop y limite temporal que son 
+        implementados directamente por el Bot o son implementados por el exchange mediante CCXT.\n
         param symbolId: Identificador del mercado en el que se debe invertir.
         param amountAsBase: Cantidad de moneda base que se debe comprar para invertir.
         param profitPercent: Porciento de ganancia con que se espera cerrar la inversion.
         param maxLossPercent: Maximo porciento de perdida que se va a tolerar.
+        param trailingStop: En True indica que maxLossPercent se debe comportar como un trailingStop. 
         param maxHours: Cantidad maxima de horas que puede estar abierta la inversion.
         return: True si logra abrir la inversion. False si no la abre.
         '''
@@ -194,16 +174,36 @@ class TrendTaker(Basics):
                         
                         # aqui se deberia comprobar si el amount a invertir supera al balance disponible.
                         
-                        order = self.core.execute_market('buy', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrderExecution", False)))                        
+                        # Calcula el precio de toma de ganancias.
+                        takeProfitPrice = None
+                        if profitPercent is not None:
+                            takeProfitPrice = lastPrice * (1 + (profitPercent / 100)) 
+                        
+                        # Calcula el precio de salida para evitar mas perdidas.
+                        stopLossPrice = None
+                        if maxLossPercent is not None:
+                            if maxLossPercent > 0: maxLossPercent *= -1     # porciento debe ser negativo.
+                            stopLossPrice = lastPrice * (1 + (maxLossPercent / 100)) 
+
+                        # Ejecuta la orden de compra a precio de mercado, especificando takeProfit y stopLoss.
+                        debug = bool(DEBUG_MODE.get("simulateOrderExecution", False))
+                        order = self.core.execute_market('buy', symbolId, amountAsBase, takeProfitPrice, stopLossPrice, maxHours, debug)   
+                                             
                         if order is not None:                        
                             self.currentInvestments[symbolId] = {
+                                "orderId": order["id"],
                                 "symbol": symbolId,
+                                "lastTickerPrice": lastPrice,
                                 "initialPrice": order["average"],
                                 "amountAsBase": order["amount"],
                                 "initialDateTimeAsSeconds": self.core.exchangeInterface.exchange.seconds(),
                                 "fee": order["fee"]["cost"],
-                                "ticker": ticker,
-                                "balance": self.currentBalance
+                                "profitPercent": profitPercent, 
+                                "maxLossPercent": maxLossPercent, 
+                                "trailingStop": trailingStop,
+                                "takeProfitPrice": takeProfitPrice,
+                                "stopLossPrice": stopLossPrice,
+                                "maxHours": maxHours
                             }
                             FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log)
                             self.totalFeeAsQuote += float(order["fee"]["cost"])
@@ -226,6 +226,7 @@ class TrendTaker(Basics):
             self.log.error(self.cmd(f'Error: No se pudieron obtener los datos del mercado {symbolId}'))
         self.log.error(self.cmd(f'Error: No se pudo invertir en el mercado {symbolId}'))
         return False
+
 
     
     def close_investment(self, symbolId:MarketId) -> bool:
@@ -301,30 +302,28 @@ class TrendTaker(Basics):
             return False
         else:
             return True
+
     
         
-    def load_current_investment(self) -> bool:
+    def load_current_investments(self) -> bool:
         '''
-        Carga desde un fichero los datos de la inversion actual en curso.\n
-        Esto permite que si el bot es detenido despues de abriri una inversion, al iniciarse
-        nuevamente pueda retomar el funcionamiento y continuar verificando la inversion o 
-        cerrarla en caso que sea necesario.\n
+        Carga desde un fichero los datos de las inversiones actuales en curso.\n
         return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
         '''
-        currentInvestmentData = FileManager.data_from_file_json(self.currentInvestmentsFileName, False, self.log)
-        if currentInvestmentData is not None:
+        currentInvestmentsData = FileManager.data_from_file_json(self.currentInvestmentsFileName, False, self.log)
+        if currentInvestmentsData is not None:
             msg1 = f'Se ha encontrado un fichero de datos de inversiones actuales": "{self.currentInvestmentsFileName}"'
             self.log.info(self.cmd(msg1))
-            if type(currentInvestmentData) != Dict:
+            if type(currentInvestmentsData) != Dict:
                 self.log.error(self.cmd('Error: La estructura del fichero de datos de inversiones actuales no es correcta.'))
                 return False
-            if len(currentInvestmentData) == 0:
+            if len(currentInvestmentsData) == 0:
                 self.log.error(self.cmd('El fichero de datos de inversiones actuales no contiene datos.'))
                 return True
             else:
-                self.log.error(self.cmd(f'Cantidad de inversiones actuales: {len(currentInvestmentData)}'))
-            for index in currentInvestmentData.keys():
-                investment = currentInvestmentData[index]
+                self.log.error(self.cmd(f'Cantidad de inversiones actuales: {len(currentInvestmentsData)}'))
+            for key in currentInvestmentsData.keys():
+                investment = currentInvestmentsData[key]
                 if self.core.is_valid_current_investment_structure(investment): 
                     symbolId = investment["symbol"]
                     base = self.core.exchangeInterface.base_of_symbol(investment["symbol"])
@@ -341,8 +340,54 @@ class TrendTaker(Basics):
                 else:
                     self.log.error(self.cmd(f'Error en los datos de la inversion en el mercado {symbolId}'))
         return False
+
+
+
+    def actualize_current_investments(self) -> bool:
+        '''
+        Carga desde un fichero los datos de las inversiones actuales en curso.\n
+        return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
+        '''
+        if self.currentInvestments is not None:
+            listOfMarketsId = ListOfMarketsId(self.currentInvestments.keys())
+            for marketId in listOfMarketsId:
+                investment = self.currentInvestments[marketId]
+                ticker = self.core.exchangeInterface.get_ticker(marketId)
+                if ticker is not None:
+                    actualPrice = float(ticker["last"])
+                    if investment["takeProfitPrice"] is not None:
+                        if actualPrice >= float(investment["takeProfitPrice"]):
+                            self.log.info(self.cmd(f'TAKE PROFIT activado en {marketId}', '\n'))
+                            self.close_investment(marketId)
+                    elif investment["maxHours"] is not None:
+                        dateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
+                        initialDateTimeAsSeconds = int(investment["initialDateTimeAsSeconds"])
+                        hours = float((dateTimeAsSeconds - initialDateTimeAsSeconds) / 60 / 60)
+                        if hours >= float(investment["maxHours"]):
+                            self.log.info(self.cmd(f'TIME STOP activado en {marketId}', '\n'))
+                            self.close_investment(marketId)
+                    elif investment["trailingStop"]:
+                        if investment["maxLossPercent"] is not None:
+                            trailingStopPrice = actualPrice * (1 + (float(investment["maxLossPercent"]) / 100))
+                            if actualPrice <= float(trailingStopPrice):
+                                self.log.info(self.cmd(f'TRAILING STOP LOSS activado en {marketId}', '\n'))
+                                self.close_investment(marketId)
+                    else:
+                        if investment["stopLossPrice"] is not None:
+                            if actualPrice <= float(investment["stopLossPrice"]):
+                                self.log.info(self.cmd(f'STOP LOSS activado en {marketId}', '\n'))
+                                self.close_investment(marketId)
+                else:
+                    self.log.warning(self.cmd(f'Error: No se pudo obtener el ticker del mercado {marketId}', '\n'))
+                time.sleep(0.2)
+        return False
+
     
         
+    ####################################################################################################
+    # METODOS PARA COTROL DE LA LOGICA PRINCIPAL DEL BOT
+    ####################################################################################################
+    
     def prepare_execution(self) -> bool:
         '''
         - Prepara e inicia las variables del algoritmo para su ejecucion.
@@ -371,11 +416,11 @@ class TrendTaker(Basics):
                     time.sleep(1)
                     if self.get_current_balance():
                         time.sleep(1)
-                        if self.load_markets():
+                        if self.core.load_markets():
                             if self.get_list_of_valid_markets():
                                 self.initialExecutionDateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
                                 self.currentInvestmentsFileName = f'./{self.botId}_current_investment.json'
-                                if self.load_current_investment():
+                                if self.load_current_investments():
                                     time.sleep(1)
                                     '''
                                     self.currentBalance = self.currentInvestment["balance"]

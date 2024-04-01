@@ -13,19 +13,17 @@ Candle = List[Union[int, float]]
 ListOfCandles = List[Candle]
 
 Ticker = Dict
-ListOfTickers = List[Ticker]
 DictOfTickers = Dict
 
-MarketId = str
+SymbolId = str
+MarketId = SymbolId
 ListOfMarketsId = List[MarketId]
 Market = Dict
-ListOfMarkets = List[Market]
 DictOfMarkets = Dict
 
 CurrencyId = str
 ListOfCurrenciesId = List[CurrencyId]
 Currency = Dict
-ListOfCurrencies = List[Currency]
 DictOfCurrencies = Dict
 
 Balance = Dict
@@ -37,6 +35,7 @@ AmountLimit = Literal["min", "max"]
 
 # Definiciones de datos propios del TrendTaker
 
+ListOfTickers = List[Ticker]
 CurrentInvestments = Dict
 ConfigurationData = Dict
 Filters = Dict
