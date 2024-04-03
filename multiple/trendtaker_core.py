@@ -273,6 +273,47 @@ class TrendTakerCore(Validations, Basics):
             return None
         
 
+
+    def sufficient_quote_to_buy(self, amountQuoteToBuy:float, marketId:MarketId):
+        '''
+        Determina si hay suficiente balance para hacer una compra.\n
+        Tiene en cuenta el fee que se debe pagar por la operacion.\n
+        param necessaryQuoteAmount: Cantidad de moneda quote que se necesita para comprar la moneda base.
+        param marketId: Identificador del mercado (symbol) donde se va a operar.
+        return: True si hay suficiente saldo para la operacion. False si no hay suficiente.
+        '''
+        try:
+            currentBalance = self.exchangeInterface.get_balance()
+            if currentBalance is not None:
+                takerFeeRate = float(self.core.exchangeInterface.get_markets()[marketId]["taker"])
+                necessaryCurrencyBalance = amountQuoteToBuy + (amountQuoteToBuy * takerFeeRate)
+                currencyId = self.exchangeInterface.quote_of_symbol(marketId)
+                availableCurrencyBalance = float(currentBalance['free'][currencyId])
+                return availableCurrencyBalance >= necessaryCurrencyBalance
+            else:
+                self.log.error(self.cmd(f'Error: No se pudo obtener el balance actual de {currencyId}'))
+                return False
+        except Exception as e:
+            self.log.exception(self.cmd(f'Error: Comprobando el balance de {currencyId}'))
+            return False
+    
+    
+    
+    def calculate_profit_percent(self, metrics:MarketMetrics):
+        return None
+    
+    
+    def calculate_max_loss_percent(self, metrics:MarketMetrics):
+        return None
+    
+    
+    def calculate_max_hours(self, metrics:MarketMetrics):
+        return None
+    
+    
+  
+    
+
 # Codigo de ejemplo y test.
 if __name__ == "__main__":
     core = TrendTakerCore('TrendTaker1', 'hitbtc', '', '')

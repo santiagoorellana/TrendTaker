@@ -14,10 +14,13 @@ DEFAULT_CONFIGURATION = {
     "maxCurrenciesToInvest": 10,
     "createWebReport": True,
     "showWebReport": True,
-    "telegramToken": "",
-    "telegramChatId": "",
     "maxTickersToSelect": 50,
     "candlesDays": 7,
+    "modeActive": {
+        "enable": False,
+        "profitPercent": 3,
+        "trailingStopEnable": False
+    },
     "filters": {
         "note": "Todos los valores de filtro se expresan en porciento.",
         "tickers": {

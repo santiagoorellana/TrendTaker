@@ -67,9 +67,11 @@ class TrendTaker(Basics):
         return True
 
 
+
     ####################################################################################################
     # METODOS PARA PEDIR DATOS AL EXCHANGE
     ####################################################################################################
+    
     
     def get_current_balance(self) -> bool:
         '''
@@ -93,7 +95,7 @@ class TrendTaker(Basics):
             self.log.info(self.cmd(f'El balance libre actual de {quote} es: {round(quoteBalance, 10)}', "\n"))
             if not self.config.data.get("amountIsPercentOfBalance", True):
                 param = "amountToInvestAsQuote"
-                if quoteBalance < float(self.config.data.get(param, 10))*2 and not DEBUG_MODE["ignoreInsufficientBalance"]:
+                if quoteBalance < float(self.config.data.get(param, 10)) * 2.5 and not DEBUG_MODE["ignoreInsufficientBalance"]:
                     self.log.error(self.cmd(f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'))
                     self.log.info(self.cmd(f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'))
                     return False
@@ -129,9 +131,11 @@ class TrendTaker(Basics):
 
 
 
+
     ####################################################################################################
     # METODOS PARA COTROLAR LAS ENTRADAS Y SALIDAS DE LAS INVERSIONES
     ####################################################################################################
+    
     
     def invest_in(
             self, 
@@ -139,8 +143,8 @@ class TrendTaker(Basics):
             amountAsBase:float, 
             profitPercent:Optional[float]=None, 
             maxLossPercent:Optional[float]=None, 
-            trailingStop:bool=False, 
-            maxHours:Optional[float]=None
+            maxHours:Optional[float]=None,
+            trailingStop:bool=False 
         ) -> bool:
         '''
         Abre una inversion nueva comprando el activo.\n
@@ -150,10 +154,12 @@ class TrendTaker(Basics):
         param amountAsBase: Cantidad de moneda base que se debe comprar para invertir.
         param profitPercent: Porciento de ganancia con que se espera cerrar la inversion.
         param maxLossPercent: Maximo porciento de perdida que se va a tolerar.
-        param trailingStop: En True indica que maxLossPercent se debe comportar como un trailingStop. 
         param maxHours: Cantidad maxima de horas que puede estar abierta la inversion.
+        param trailingStop: En True indica que maxLossPercent se debe comportar como un trailingStop. 
         return: True si logra abrir la inversion. False si no la abre.
         '''
+        if maxHours is None:
+            maxHours = int(self.config.data["candlesDays"]) * 24
         market = self.core.exchangeInterface.get_markets()[symbolId]
         if market is not None:
             ticker = self.core.exchangeInterface.get_ticker(symbolId)
@@ -303,6 +309,7 @@ class TrendTaker(Basics):
         else:
             return True
 
+
     
         
     def load_current_investments(self) -> bool:
@@ -343,50 +350,66 @@ class TrendTaker(Basics):
 
 
 
+
     def actualize_current_investments(self) -> bool:
         '''
-        Carga desde un fichero los datos de las inversiones actuales en curso.\n
+        Actualiza el estado de las inversiones actuales en curso.\n
+        Ejecuta las operaciones de venta de los activos cuyo precio a cruzado los umbrales de 
+        Take Profit o Stop Loss. Tambien ejecuta la venta si la inversion supera el tiempo maximo
+        permitido para la inversion.\n
         return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
         '''
         if self.currentInvestments is not None:
             listOfMarketsId = ListOfMarketsId(self.currentInvestments.keys())
             for marketId in listOfMarketsId:
                 investment = self.currentInvestments[marketId]
+                openInvesting = True
                 ticker = self.core.exchangeInterface.get_ticker(marketId)
                 if ticker is not None:
                     actualPrice = float(ticker["last"])
-                    if investment["takeProfitPrice"] is not None:
+                    
+                    if openInvesting:
+                        if investment["trailingStop"]:
+                            if investment["maxLossPercent"] is not None:
+                                trailingStopPrice = actualPrice * (1 + (float(investment["maxLossPercent"]) / 100))
+                                if actualPrice <= float(trailingStopPrice):
+                                    self.log.info(self.cmd(f'TRAILING STOP LOSS activado en {marketId}', '\n'))
+                                    openInvesting = not self.close_investment(marketId)
+                        else:
+                            if investment["stopLossPrice"] is not None:
+                                if actualPrice <= float(investment["stopLossPrice"]):
+                                    self.log.info(self.cmd(f'STOP LOSS activado en {marketId}', '\n'))
+                                    openInvesting = not self.close_investment(marketId)
+                                    
+                    if openInvesting and investment["takeProfitPrice"] is not None:
                         if actualPrice >= float(investment["takeProfitPrice"]):
                             self.log.info(self.cmd(f'TAKE PROFIT activado en {marketId}', '\n'))
-                            self.close_investment(marketId)
-                    elif investment["maxHours"] is not None:
+                            openInvesting = not self.close_investment(marketId)
+                            
+                    if openInvesting:
+                        if investment["maxHours"] is not None:
+                            maxHours = float(investment["maxHours"])
+                        else:
+                            maxHours = int(self.config.data["candlesDays"]) * 24
                         dateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
                         initialDateTimeAsSeconds = int(investment["initialDateTimeAsSeconds"])
                         hours = float((dateTimeAsSeconds - initialDateTimeAsSeconds) / 60 / 60)
-                        if hours >= float(investment["maxHours"]):
+                        if hours >= maxHours:
                             self.log.info(self.cmd(f'TIME STOP activado en {marketId}', '\n'))
-                            self.close_investment(marketId)
-                    elif investment["trailingStop"]:
-                        if investment["maxLossPercent"] is not None:
-                            trailingStopPrice = actualPrice * (1 + (float(investment["maxLossPercent"]) / 100))
-                            if actualPrice <= float(trailingStopPrice):
-                                self.log.info(self.cmd(f'TRAILING STOP LOSS activado en {marketId}', '\n'))
-                                self.close_investment(marketId)
-                    else:
-                        if investment["stopLossPrice"] is not None:
-                            if actualPrice <= float(investment["stopLossPrice"]):
-                                self.log.info(self.cmd(f'STOP LOSS activado en {marketId}', '\n'))
-                                self.close_investment(marketId)
+                            openInvesting = not self.close_investment(marketId)
                 else:
                     self.log.warning(self.cmd(f'Error: No se pudo obtener el ticker del mercado {marketId}', '\n'))
                 time.sleep(0.2)
+            return True
         return False
 
     
         
+        
     ####################################################################################################
     # METODOS PARA COTROL DE LA LOGICA PRINCIPAL DEL BOT
     ####################################################################################################
+    
     
     def prepare_execution(self) -> bool:
         '''
@@ -520,30 +543,35 @@ class TrendTaker(Basics):
         if orderedMarkets is None: 
             return False
         for marketData in orderedMarkets:
-            symbolId = marketData["symbolId"]
-            msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(float(marketData['tickerData']['percentage']), 2)} %"
-            self.log.info(self.cmd(msg1))                                
-            lastPrice = float(marketData["tickerData"]["last"])
-            amountToInvestAsQuote = float(self.config.data.get("amountToInvestAsQuote", 10))
-            amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
-            if self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
-                fileName = report.create_unique_filename()
-                title = f'{self.botId} {self.exchangeId} {symbolId}'
-                report.create_graph(marketData["candles1h"], title, fileName, marketData["metrics"], False) 
-                #if report.count_market_data() >= 10: break              
-                category:Category = "potentialMarket"             
-                if symbolId not in self.currentInvestments:
-                    pass
-                    #marketData["invest"]
-                    #if self.invest_in(symbolId, amountToInvestAsBase):
-                    #    category = "openInvest"
-                else:
-                    # Si el mercado potencial seleccionado es el mismo en el que ya se ha invertido, no se hace nada y se procede a continuar verificando el estado de esa inversion.
-                    pass
-                    # Si ha superado el tiempo especifico para la imversio, deve termimarlo
-                    #if not self.close_investment(symbolId):   
-                    #    category = "closedInvest"  
-                report.append_market_data(fileName, marketData["metrics"], category)
+            if len(self.currentInvestments.keys()) < int(self.config.data["maxCurrenciesToInvest"]):
+                symbolId = marketData["symbolId"]
+                percentage = float(marketData['tickerData']['percentage'])
+                msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(percentage, 2)} %"
+                self.log.info(self.cmd(msg1))                                
+                lastPrice = float(marketData["tickerData"]["last"])
+                amountToInvestAsQuote = float(self.config.data["amountToInvestAsQuote"])
+                amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
+                if self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
+                    graphFileName = report.create_unique_filename()
+                    graphTitle = f'{self.botId} {self.exchangeId} {symbolId}'
+                    report.create_graph(marketData["candles1h"], graphTitle, graphFileName, marketData["metrics"], False)           
+                    category:Category = "potentialMarket"             
+                    if symbolId not in self.currentInvestments:
+                        if self.core.sufficient_quote_to_buy(amountToInvestAsQuote, symbolId):
+                            if self.config.data["modeActive"]["enable"]:
+                                if self.invest_in(
+                                        symbolId, 
+                                        amountToInvestAsBase, 
+                                        self.core.calculate_profit_percent(marketData["metrics"]), 
+                                        self.core.calculate_max_loss_percent(marketData["metrics"]),
+                                        self.core.calculate_max_hours(marketData["metrics"]),
+                                        self.config.data["modeActive"]["trailingStopEnable"]
+                                    ):
+                                    category = "openInvest"
+                            else:
+                                if self.invest_in(symbolId, amountToInvestAsBase):
+                                    category = "openInvest"                                
+                    report.append_market_data(graphFileName, marketData["metrics"], category)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
         if len(self.currentInvestments) == 0:
@@ -557,3 +585,4 @@ if __name__ == "__main__":
     #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
     bot = TrendTaker('TrendTaker1', credentials['exchange'], credentials['key'], credentials['secret'])
     bot.execute()    
+ 
