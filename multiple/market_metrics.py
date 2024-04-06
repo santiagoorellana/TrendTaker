@@ -23,6 +23,7 @@ class MarketMetrics():
         potencial de ganancias.\n
         param ticker: Ultimo ticker del mercado, obtenido del exchange, mediante la librería ccxt.
         param candles1h: Lista de velas h1 obtenidas del exchange, mediante la librería ccxt.
+        param candlesHours: Cantidad de velas que se necesitan para analizar el mercado.
         param preselected: Lista de currencies que deben pasar el filtro siempre y quedar en primera posicion.
         return: Devuelve un objeto con las metricas del mercado.
         '''    
@@ -155,7 +156,7 @@ class MarketMetrics():
     ####################################################################################################
     
     @staticmethod
-    def _is_candle_colapse(candle: Candle, minDeltaAsPercent: float) -> bool:
+    def _is_candle_colapse(candle: Candle) -> bool:  #minDeltaAsPercent:float
         '''
         Permite saber si una vela esta colapsada.
         Una vela colapsada (doji, linea) tiene sus cuatro componentes open, low, high y close con valores 
@@ -170,8 +171,10 @@ class MarketMetrics():
         try:
             candleValues = candle[1:5]
             deltaPercent =  MarketMetrics._delta(min(candleValues), max(candleValues))
-            return deltaPercent < minDeltaAsPercent if deltaPercent is not None else True
-        except:
+            result = deltaPercent < 0.1 if deltaPercent is not None else True
+            return result
+        except Exception as e:
+            print(f"Error: Calculando el colapso de la vela. Exception: {str(e)}")
             return True
     
 
@@ -189,9 +192,13 @@ class MarketMetrics():
         return: Devuelve el porciento de velas colapsadas. Si ocurre un error, devuelve 100.
         '''
         try:
-            colapses = len([filter(lambda candle: MarketMetrics._is_candle_colapse(candle, minDeltaAsPercent), candles)])
-            return float(colapses / len(candles) * 100)
+            filtered = []
+            for candle in candles:
+                if MarketMetrics._is_candle_colapse(candle):
+                    filtered.append(candle)
+            return float(len(filtered) / len(candles) * 100)
         except Exception as e:
+            print(f"Error: Calculando el porciento de colapso de las velas. Exception: {str(e)}")
             return float(100)
 
 
@@ -228,9 +235,9 @@ class MarketMetrics():
         
 
     @staticmethod
-    def _candles_1h_completion(candles1h: ListOfCandles, requestedCandlesCount: int) -> float:
+    def _candles_1h_completion(candles1h:ListOfCandles, requestedCandlesCount:int) -> float:
         '''
-        Devuelve el porciento de completitud del rango de velas de la lista        
+        Devuelve el porciento de completitud del rango de velas de la lista.        
         Cuando se piden las velas al exchange, se especifica la cantidad de velas. 
         Es posible que en los datos devueltos falten algunas velas. 
         Esta función devuelve el porciento de completado de las velas devueltas. 
@@ -249,17 +256,17 @@ class MarketMetrics():
     @staticmethod
     def _candles_slice(candles: ListOfCandles, segment: Segment, count:int=1) -> ListOfCandles:
         '''
-        Devuelve un segmento de las velas.
+        Devuelve un segmento de las velas.\n
         param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
         param segment: Determina el segmento que se va a retornar.
-                "whole" = Calcula la variacion del total de las velas.
-                "half1" = Calcula la variacion de la primera mitad de las velas.
-                "half2" = Calcula la variacion de la segunda mitad de las velas.
-                "quarter1" = Calcula la variacion del primer cuarto de las velas.
-                "quarter2" = Calcula la variacion del segundo cuarto de las velas.
-                "quarter3" = Calcula la variacion del tercer cuarto de las velas.
-                "quarter4" = Calcula la variacion del ultimo cuarto de las velas.
-                "last" = Indica que se deben tomar las ultimas velas. 
+        - "whole" = Calcula la variacion del total de las velas.
+        - "half1" = Calcula la variacion de la primera mitad de las velas.
+        - "half2" = Calcula la variacion de la segunda mitad de las velas.
+        - "quarter1" = Calcula la variacion del primer cuarto de las velas.
+        - "quarter2" = Calcula la variacion del segundo cuarto de las velas.
+        - "quarter3" = Calcula la variacion del tercer cuarto de las velas.
+        - "quarter4" = Calcula la variacion del ultimo cuarto de las velas.
+        - "last" = Indica que se deben tomar las ultimas velas. \n
         param count: Indica la cantidad de velas a tomar cuando el parametro "segment" es igual a "last".
         return: Devuelve el segmento de velas indicado. Si ocurre un lista vacia.
         '''
@@ -294,7 +301,7 @@ class MarketMetrics():
 
 
     @staticmethod
-    def _candles_statistics(candles: ListOfCandles, segment: Segment='whole', count:int=1) -> Optional[Dict]:
+    def _candles_statistics(candles:ListOfCandles, segment:Segment='whole', count:int=1) -> Optional[Dict]:
         '''
         Devuelve estadisticas descriptivas del segmento de velas.
         param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
@@ -308,7 +315,7 @@ class MarketMetrics():
             if len(sliced) == 0:
                 return None
             colapses = MarketMetrics._candles_colapses(sliced)
-            completion = MarketMetrics._candles_1h_completion(sliced, len(sliced))            
+            completion = MarketMetrics._candles_1h_completion(sliced, len(sliced))    
             prices = [float(MarketMetrics._candle_estimated_average(candle)) for candle in sliced]
             average = float(sum(prices) / len(prices))
             absolutesDeviations = [abs(float(price) - average) for price in prices]

@@ -1,0 +1,47 @@
+{
+    "BTC/USDT": {
+        "orderId": "1712404209279",
+        "symbol": "BTC/USDT",
+        "lastTickerPrice": 67708.51,
+        "initialPrice": 67708.51,
+        "amountAsBase": 0.0001476919223299996,
+        "initialDateTimeAsSeconds": 1712404208,
+        "fee": 2.953838446599992e-07,
+        "profitPercent": null,
+        "maxLossPercent": null,
+        "trailingStop": false,
+        "takeProfitPrice": null,
+        "stopLossPrice": null,
+        "maxHours": 168
+    },
+    "ETH/USDT": {
+        "orderId": "1712404211382",
+        "symbol": "ETH/USDT",
+        "lastTickerPrice": 3335.333,
+        "initialPrice": 3335.333,
+        "amountAsBase": 0.0029995359717851647,
+        "initialDateTimeAsSeconds": 1712404211,
+        "fee": 5.9990719435703296e-06,
+        "profitPercent": null,
+        "maxLossPercent": null,
+        "trailingStop": false,
+        "takeProfitPrice": null,
+        "stopLossPrice": null,
+        "maxHours": 168
+    },
+    "BRG/USDT": {
+        "orderId": "1712404208378",
+        "symbol": "BRG/USDT",
+        "lastTickerPrice": 0.0014509,
+        "initialPrice": 0.0014509,
+        "amountAsBase": 6901.311249137336,
+        "initialDateTimeAsSeconds": 1712404213,
+        "fee": 13.802622498274673,
+        "profitPercent": null,
+        "maxLossPercent": null,
+        "trailingStop": false,
+        "takeProfitPrice": null,
+        "stopLossPrice": null,
+        "maxHours": 168
+    }
+}

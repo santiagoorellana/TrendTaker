@@ -134,7 +134,7 @@ class TrendTakerCore(Validations, Basics):
         marketsData:ListOfMarketData = []
         try:
             preselected = configuration.get("preselected", [])
-            cadlesHours = int(configuration.get("candlesDays", 7)) * 24
+            candlesHours = int(configuration.get("candlesDays", 7)) * 24
             maxCount = len(validTickers)
             count = 0
             for ticker in validTickers:
@@ -142,25 +142,33 @@ class TrendTakerCore(Validations, Basics):
                 symbolId = ticker['symbol']
                 baseId = self.exchangeInterface.base_of_symbol(symbolId)
                 quoteId = self.exchangeInterface.quote_of_symbol(symbolId)
-                candles1h = self.exchangeInterface.get_last_candles(symbolId, cadlesHours, "1h")
+                candles1h = self.exchangeInterface.get_last_candles(symbolId, candlesHours, "1h")
                 if candles1h is not None:
-                    market = {
-                        "symbolId": symbolId,
-                        "baseId": baseId,
-                        "quoteId": quoteId,
-                        "tickerData": ticker,
-                        "symbolData": self.exchangeInterface.get_markets()[symbolId],
-                        "baseData": self.exchangeInterface.get_currencies()[baseId],
-                        "quoteData": self.exchangeInterface.get_currencies()[quoteId],
-                        "candles1h": candles1h,
-                        "metrics": self.metrics.calculate(ticker, candles1h, preselected),
-                    }              
-                    msg1 = f'[{count} de {maxCount}] Se han obtenido los datos del mercado: {symbolId}'
-                    if self.is_potential_market(market, configuration):
-                        marketsData.append(market)
-                        msg1 = f"{msg1}  [POTENCIAL]"
-                    self.log.info(self.cmd(msg1))
-                    time.sleep(0.1)
+                    if len(candles1h) >= candlesHours:      # Si el mercado tiene la cantidad de velas pedidas...
+                        market = {
+                            "symbolId": symbolId,
+                            "baseId": baseId,
+                            "quoteId": quoteId,
+                            "tickerData": ticker,
+                            "symbolData": self.exchangeInterface.get_markets()[symbolId],
+                            "baseData": self.exchangeInterface.get_currencies()[baseId],
+                            "quoteData": self.exchangeInterface.get_currencies()[quoteId],
+                            "candles1h": candles1h,
+                            "metrics": self.metrics.calculate(ticker, candles1h[0:candlesHours], preselected),
+                        }              
+                        msg1 = f'[{count} de {maxCount}] Se han obtenido los datos del mercado: {symbolId}'
+                        if self.is_preselected(market, configuration):
+                            marketsData.append(market)
+                            msg1 = f"{msg1}  [PRESELECTED]"
+                        elif self.is_potential_market(market, configuration):
+                            marketsData.append(market)
+                            msg1 = f"{msg1}  [POTENCIAL]"
+                        self.log.info(self.cmd(msg1))
+                    else:
+                        self.log.info(self.cmd(f"No hay suficientes velas en el mercado {symbolId}"))                        
+                else:
+                    self.log.warning(self.cmd(f"No se pudieron obtener las velas del mercado {symbolId}"))
+                time.sleep(0.1)
             self.log.info(self.cmd(f'Se han preseleccionado {len(marketsData)} mercados con ganancia potencial.', '', '\n'))
             try:
                 return sorted(marketsData, key=lambda x: float(x["metrics"]["potential"]), reverse=True)
@@ -282,12 +290,13 @@ class TrendTakerCore(Validations, Basics):
         param marketId: Identificador del mercado (symbol) donde se va a operar.
         return: True si hay suficiente saldo para la operacion. False si no hay suficiente.
         '''
+        currencyId = ""
         try:
+            currencyId = self.exchangeInterface.quote_of_symbol(marketId)
             currentBalance = self.exchangeInterface.get_balance()
             if currentBalance is not None:
-                takerFeeRate = float(self.core.exchangeInterface.get_markets()[marketId]["taker"])
+                takerFeeRate = float(self.exchangeInterface.get_markets()[marketId]["taker"])
                 necessaryCurrencyBalance = amountQuoteToBuy + (amountQuoteToBuy * takerFeeRate)
-                currencyId = self.exchangeInterface.quote_of_symbol(marketId)
                 availableCurrencyBalance = float(currentBalance['free'][currencyId])
                 return availableCurrencyBalance >= necessaryCurrencyBalance
             else:

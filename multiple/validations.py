@@ -166,10 +166,26 @@ class Validations(Basics):
 
 
     @staticmethod
+    def is_preselected(marketData, configuration:Dict) -> bool:
+        '''
+        Devuelve true si el mercado esta preseleccionado.\n
+        param marketData: Datos y parametros del mercado que se deben comprobar.
+        param configuration: Objeto con la configuracion del algoritmo.
+        return: Devuelve True si el mercado esta preseleccionado. De lo contrario, devuelve False.
+        '''        
+        preselected = configuration.get("preselected", [])
+        base = str(marketData["baseId"])
+        if base.upper() in preselected or base.lower() in preselected:
+            return True
+        else:
+            return False
+
+
+    @staticmethod
     def is_potential_market(marketData, configuration:Dict) -> bool:
         '''
         Devuelve true si el mercado tiene suficiente liquidez y potencial de crecimiento.\n
-        param metrics: Datos y parametros del mercado que se deben comprobar.
+        param marketData: Datos y parametros del mercado que se deben comprobar.
         param configuration: Objeto con la configuracion del algoritmo.
         return: Devuelve True si el mercado tiene liquidez y potencial de crecimiento. De lo contrario, devuelve False.
         '''        

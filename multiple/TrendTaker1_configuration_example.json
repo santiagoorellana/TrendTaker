@@ -15,10 +15,13 @@
     "maxCurrenciesToInvest": 10,
     "createWebReport": true,
     "showWebReport": true,
-    "telegramToken": "",
-    "telegramChatId": "",
     "maxTickersToSelect": 50,
     "candlesDays": 7,
+    "modeActive": {
+        "enable": false,
+        "profitPercent": 3,
+        "trailingStopEnable": false
+    },
     "filters": {
         "note": "Todos los valores de filtro se expresan en porciento.",
         "tickers": {

@@ -443,26 +443,7 @@ class TrendTaker(Basics):
                             if self.get_list_of_valid_markets():
                                 self.initialExecutionDateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
                                 self.currentInvestmentsFileName = f'./{self.botId}_current_investment.json'
-                                if self.load_current_investments():
-                                    time.sleep(1)
-                                    '''
-                                    self.currentBalance = self.currentInvestment["balance"]
-                                    self.totalFeeAsQuote = self.currentInvestment["fee"]
-                                    self.initialBalance = self.currentBalance
-                                    quote = self.config.data['currencyQuote']
-                                    quoteBalance = float(self.initialBalance['free'][quote])
-                                    msg1 = 'Los calculos de profit seran realizados con los datos de la iversion actual en curso.'                                
-                                    msg2 = 'El balance libre al inicio de la iversion actual es:'
-                                    msg3 = f'El balance libre de {quote} al inicio de la iversion actual es: {round(quoteBalance, 10)}'
-                                    self.log.info(msg1)
-                                    self.log.info(f"{msg2} {str(self.initialBalance)}")
-                                    self.log.info(msg3)
-                                    print(f"{msg1}")                                
-                                    TrendTakerCore.show_object(self.initialBalance['free'], f"\n{msg2}") 
-                                    print(f"\n{msg3}")         
-                                    time.sleep(1)       
-                                    time.sleep(1)
-                                    '''           
+                                self.load_current_investments()
                                 return True
         self.log.info(self.cmd('Terminado: No se puede continuar.'))
         return False
@@ -495,11 +476,11 @@ class TrendTaker(Basics):
         Nota: Esto se hace para comprobar el funcionamiento de las compras y ventas.\n
         return: True si logra ejecutar las ordenes de compra y venta correctamente. False si ocurre error.
         '''
-        marketId = DEBUG_MODE.get("onlyInvestIn", None)
-        if marketId is not None:
-            self.invest_in(str(marketId), 1, -1, 24)
-            self.log.info(self.cmd('Terminado'))
-            return True
+        #marketId = DEBUG_MODE.get("onlyInvestIn", None)
+        #if marketId is not None:
+        #    self.invest_in(str(marketId), 1, -1, 24)
+        #    self.log.info(self.cmd('Terminado'))
+        #    return True
         return False
             
 
