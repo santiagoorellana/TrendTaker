@@ -2,7 +2,6 @@
 from typing import Dict, List, Literal, Optional
 from exchange_interface import *
 
-Segment = Literal['whole', 'half1', 'half2', 'quarter1', 'quarter2', 'quarter3', 'quarter4', 'last']
 Metrics = Dict
 MetricsSummary = Dict
 
@@ -27,23 +26,15 @@ class MarketMetrics():
         param preselected: Lista de currencies que deben pasar el filtro siempre y quedar en primera posicion.
         return: Devuelve un objeto con las metricas del mercado.
         '''    
-        result: Metrics = {"completed": False}
-        result["base"] = ExchangeInterface.base_of_symbol(ticker["symbol"])
-        result["quote"] = ExchangeInterface.quote_of_symbol(ticker["symbol"])
-        result["ticker"] = {
-            "lastPrice": float(ticker["last"]),
-            "percentage": float(ticker["percentage"]),
-            "spread": MarketMetrics.ticker_spread(ticker),
-            "deltaOverAmplitude": MarketMetrics.ticker_profit_over_amplitude(ticker)
-        }
-        result["candles"] = {
-            "whole": MarketMetrics._candles_statistics(candles1h, "whole"),
-            "lastHalf": MarketMetrics._candles_statistics(candles1h, "half2"),
-            "lastQuarter": MarketMetrics._candles_statistics(candles1h, "quarter4")
-        }
-        result["potential"] = MarketMetrics._calculate_potential(result, preselected)
-        result["completed"] = True
-        return result    
+        metrics: Metrics = {"completed": False}
+        metrics["base"] = ExchangeInterface.base_of_symbol(ticker["symbol"])
+        metrics["quote"] = ExchangeInterface.quote_of_symbol(ticker["symbol"])
+        metrics["ticker"] = MarketMetrics._ticker_statistics(ticker)
+        metrics["candles"] = MarketMetrics._candles_statistics(candles1h)
+        metrics["trading"] = MarketMetrics._trading_parameters(metrics)
+        metrics["potential"] = MarketMetrics._calculate_potential(metrics, preselected)
+        metrics["completed"] = True
+        return metrics    
     
     
     ####################################################################################################
@@ -97,17 +88,14 @@ class MarketMetrics():
             return []
 
 
+
     @staticmethod
     def _calculate_potential(metrics:Metrics, preselected:ListOfCurrenciesId):
         if str(metrics["base"]).upper() in preselected or str(metrics["base"]).lower() in preselected:
-            return float(1000000)
-        weightedValues = [
-            float(metrics["ticker"]["percentage"]),
-            float(metrics["candles"]["lastQuarter"]["percent"]["changeOpenToAverage"]),
-            float(metrics["candles"]["lastHalf"]["percent"]["changeOpenToAverage"]), 
-            float(metrics["candles"]["whole"]["percent"]["changeOpenToAverage"])
-        ]
-        return float(sum(weightedValues) / len(weightedValues))
+            return float(1000000000)
+        tickerProfitRatio = float(metrics["ticker"]["percentage"]) / 100
+        candlesProfitRatio = float(metrics["candles"]["percent"]["changeWhole"])
+        return float(tickerProfitRatio * candlesProfitRatio)
 
 
 
@@ -148,6 +136,17 @@ class MarketMetrics():
             return (tickerData['percentage'] / delta * 100)
         except Exception as e:
             return 0
+
+
+
+    @staticmethod
+    def _ticker_statistics(tickerData: Ticker) -> Optional[Dict]:
+        return {
+            "lastPrice": float(tickerData["last"]),
+            "percentage": float(tickerData["percentage"]),
+            "spread": MarketMetrics.ticker_spread(tickerData),
+            "deltaOverAmplitude": MarketMetrics.ticker_profit_over_amplitude(tickerData)
+        }
     
 
     ####################################################################################################
@@ -176,6 +175,7 @@ class MarketMetrics():
         except Exception as e:
             print(f"Error: Calculando el colapso de la vela. Exception: {str(e)}")
             return True
+
     
 
     @staticmethod
@@ -200,6 +200,7 @@ class MarketMetrics():
         except Exception as e:
             print(f"Error: Calculando el porciento de colapso de las velas. Exception: {str(e)}")
             return float(100)
+
 
 
     @staticmethod
@@ -253,97 +254,68 @@ class MarketMetrics():
             return float(100)
 
 
-    @staticmethod
-    def _candles_slice(candles: ListOfCandles, segment: Segment, count:int=1) -> ListOfCandles:
-        '''
-        Devuelve un segmento de las velas.\n
-        param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
-        param segment: Determina el segmento que se va a retornar.
-        - "whole" = Calcula la variacion del total de las velas.
-        - "half1" = Calcula la variacion de la primera mitad de las velas.
-        - "half2" = Calcula la variacion de la segunda mitad de las velas.
-        - "quarter1" = Calcula la variacion del primer cuarto de las velas.
-        - "quarter2" = Calcula la variacion del segundo cuarto de las velas.
-        - "quarter3" = Calcula la variacion del tercer cuarto de las velas.
-        - "quarter4" = Calcula la variacion del ultimo cuarto de las velas.
-        - "last" = Indica que se deben tomar las ultimas velas. \n
-        param count: Indica la cantidad de velas a tomar cuando el parametro "segment" es igual a "last".
-        return: Devuelve el segmento de velas indicado. Si ocurre un lista vacia.
-        '''
-        try:
-            limitQ1 = round(float(len(candles)-1) * 0.25) 
-            limitQ2 = round(float(len(candles)-1) * 0.5)
-            limitQ3 = round(float(len(candles)-1) * 0.75)
-            if segment == 'whole':
-                return candles
-            elif segment == 'half1':
-                return candles[0:limitQ2+1]
-            elif segment == 'half2':
-                return candles[limitQ2:]
-            elif segment == 'quarter1':
-                return candles[0:limitQ1+1]
-            elif segment == 'quarter2':
-                return candles[limitQ1:limitQ2+1]
-            elif segment == 'quarter3':
-                return candles[limitQ2:limitQ3+1]
-            elif segment == 'quarter4':
-                return candles[limitQ3:]
-            elif segment == 'last':
-                if count < len(candles):
-                    return candles[-count:]
-                else:
-                    return []
-            else:
-                return []
-        except:
-            return []
-
-
 
     @staticmethod
-    def _candles_statistics(candles:ListOfCandles, segment:Segment='whole', count:int=1) -> Optional[Dict]:
+    def _candles_statistics(candles:ListOfCandles) -> Optional[Dict]:
         '''
-        Devuelve estadisticas descriptivas del segmento de velas.
+        Devuelve estadisticas descriptivas de las velas.
         param candles: Lista de velas obtenidas del exchange, mediante la librería ccxt.
-        param segment: Determina el segmento al que se le calcula la varicacion. Ver type "Segment".
-        param count: Indica la cantidad de velas a tomar cuando el parametro "segment" es igual a "last".
-        return: Devuelve un objeto con las estadisticas descriptivas del segmento de velas.
+        return: Devuelve un objeto con las estadisticas descriptivas de las velas.
                 Si ocurre un error, devuelve None.
         '''
         try:
-            sliced = MarketMetrics._candles_slice(candles, segment, count)
-            if len(sliced) == 0:
-                return None
-            colapses = MarketMetrics._candles_colapses(sliced)
-            completion = MarketMetrics._candles_1h_completion(sliced, len(sliced))    
-            prices = [float(MarketMetrics._candle_estimated_average(candle)) for candle in sliced]
+            colapses = MarketMetrics._candles_colapses(candles)
+            completion = MarketMetrics._candles_1h_completion(candles, len(candles))    
+            prices = [float(MarketMetrics._candle_estimated_average(candle)) for candle in candles]
             average = float(sum(prices) / len(prices))
             absolutesDeviations = [abs(float(price) - average) for price in prices]
             deviation = sum(absolutesDeviations) / len(absolutesDeviations)            
-            trendLine = MarketMetrics._create_trend_line(prices[0], average, len(prices))
-            trendDeviation = MarketMetrics._candles_trend_deviation(sliced, trendLine) 
+            trendLine = MarketMetrics._create_trend_line(prices[0], prices[-1], len(prices))
+            trendDeviation = MarketMetrics._candles_trend_deviation(candles, trendLine) 
+            middle = round(float(len(prices)-1) * 0.5)
             return {
-                "count": len(sliced),
-                "open": sliced[0][CANDLE_OPEN],
-                "low": min([candle[CANDLE_LOW] for candle in sliced]),
-                "higt": max([candle[CANDLE_HIGT] for candle in sliced]),
-                "close": sliced[-1][CANDLE_CLOSE],
+                "count": len(candles),
+                "open": prices[0],
+                "low": min([candle[CANDLE_LOW] for candle in candles]),
+                "higt": max([candle[CANDLE_HIGT] for candle in candles]),
+                "close": prices[-1],
                 "average": average,
                 "deviation": deviation,
                 "percent": {
                     "colapses": colapses,
                     "completion": completion,
                     "deviation": MarketMetrics._delta(average, deviation),
-                    "changeOpenToClose": MarketMetrics._delta(prices[0], prices[-1]),
-                    "changeOpenToAverage": MarketMetrics._delta(prices[0], average),
-                    "speedOpenToClose":  abs(prices[0] - prices[-1]) / len(sliced),
-                    "speedOpenToAverage":  abs(prices[0] - average) / len(sliced)
+                    "changeWhole": MarketMetrics._delta(prices[0], prices[-1]),
+                    "changeHalf1": MarketMetrics._delta(prices[0], prices[middle]),
+                    "changeHalf2": MarketMetrics._delta(prices[middle], prices[-1])
                 },
                 "trendDeviation": trendDeviation
             }
         except Exception as e:
-            print(e)
+            print(f"Error: Calculando las estadisticas de las velas. Exception: {str(e)}")
             return None
+
+
+
+    @staticmethod
+    def _trading_parameters(metrics:Metrics) -> Any:
+        '''
+        Devuelve datos de trading para invertir en el mercado.\n
+        param metrics: Objeto con datos estadisticos sobre el mercado especifico.
+        return: Devuelve un objeto con datos de trading para invertir en el mercado.
+        '''
+        profitPercent = float(metrics["ticker"]["percentage"])
+        maxLossPercent = float(metrics["candles"]["trendDeviation"]["percent"]["lowerMin"])
+        lastPrice = float(metrics["ticker"]["lastPrice"])
+        return {
+            "profitPercent": profitPercent,
+            "maxLossPercent": maxLossPercent,
+            "lastPrice": lastPrice,
+            "takeProfitLevel": lastPrice * (1 + (profitPercent / 100)),
+            "stopLossLevel": lastPrice * (1 + (maxLossPercent / 100)),
+            "maxHours": 24
+        }
+    
 
 
     @staticmethod
@@ -392,6 +364,8 @@ class MarketMetrics():
         except Exception as e:
             print(e)
             return None
+
+
 
 
     @staticmethod

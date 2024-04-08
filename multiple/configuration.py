@@ -33,8 +33,8 @@ DEFAULT_CONFIGURATION = {
             "maxColapses": 20,
             "minCompletion": 85,
             "minProfitWhole": 3.0,
-            "minProfitLastHalf": 3.0,
-            "minProfitLastQuarter": 3.0
+            "minProfitHalf1": 1.0,
+            "minProfitHalf2": 1.0
         }
     }
 }

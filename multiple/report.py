@@ -1,7 +1,7 @@
 
 import os
 import webbrowser
-from typing import Any, Dict, Literal, Optional, List
+from typing import Any, Dict, Optional, List
 import datetime
 from exchange_interface import ListOfCandles
 import plotly.graph_objects as go # type: ignore
@@ -101,8 +101,11 @@ class Report(Basics):
                     summary = self.summary(market["data"])
                     for key in summary.keys():
                         param = summary[key]
-                        valueStr = str(f'{round(param["value"], param["decimals"])} {param["measurementUnit"]}')
-                        file.write(f"<strong>{key}</strong>: <font color='#0000ff'>{valueStr}</font><br>\n")                    
+                        valueStr = str(f'{round(param["value"], param["decimals"])} {param["unit"]}')
+                        color = param.get("color", '#0000ff')
+                        if param.get("strong", False):
+                            valueStr = f"<strong>{valueStr}</strong>"
+                        file.write(f"<strong>{key}</strong>: <font color='{color}'>{valueStr}</font><br>\n")                    
                     file.write("</td>\n")
                     file.write("</tr>\n")
                 file.write("</table></body></html>\n")
@@ -150,39 +153,61 @@ class Report(Basics):
             fig = go.Figure(data=[candlestick])
             fig.update_layout(xaxis_rangeslider_visible=False)
             fig.update_layout(title_text=title, title_x=0.5)
+            fig.update_layout(showlegend=False)
             if metrics is not None:
-                trendDeviation = metrics["candles"]["whole"]["trendDeviation"]["absolute"]
-                average =metrics["candles"]["whole"]["average"]
+                trendDeviation = metrics["candles"]["trendDeviation"]["absolute"]
+                valueOpen = metrics["candles"]["open"]
+                valueClose = metrics["candles"]["close"]
                 upperMax = float(trendDeviation.get("upperMax", 0))
                 lowerMin = float(trendDeviation.get("lowerMin", 0))
                 upperAverage = float(trendDeviation.get("upperAverage", 0))
                 lowerAverage = float(trendDeviation.get("lowerAverage", 0))
                 lineStyleExtreme = dict(color='gray', width=1)
                 lineStyleAverage = dict(color='blue', width=1)
+                takeProfitLevel = metrics["trading"]["takeProfitLevel"]
+                stopLossLevel = metrics["trading"]["stopLossLevel"]
                 if upperMax != 0:
                     fig.add_shape(
-                        type='line', x0=x[0], y0=close[0] + upperMax, x1=x[-1], y1=average + upperMax, 
+                        type='line', x0=x[0], y0=valueOpen + upperMax, x1=x[-1], y1=valueClose + upperMax, 
                         line=lineStyleExtreme, xref='x', yref='y'
                     )
                 if lowerMin != 0:
                     fig.add_shape(
-                        type='line', x0=x[0], y0=close[0] + lowerMin, x1=x[-1], y1=average + lowerMin,
+                        type='line', x0=x[0], y0=valueOpen + lowerMin, x1=x[-1], y1=valueClose + lowerMin,
                         line=lineStyleExtreme, xref='x', yref='y'
                     )
                 if upperAverage != 0:
                     fig.add_shape(
-                        type='line', x0=x[0], y0=close[0] + upperAverage, x1=x[-1], y1=average + upperAverage,
+                        type='line', x0=x[0], y0=valueOpen + upperAverage, x1=x[-1], y1=valueClose + upperAverage,
                         line=lineStyleAverage, xref='x', yref='y'
                     )
                 if lowerAverage != 0:
                     fig.add_shape(
-                        type='line', x0=x[0], y0=close[0] + lowerAverage, x1=x[-1], y1=average + lowerAverage,
+                        type='line', x0=x[0], y0=valueOpen + lowerAverage, x1=x[-1], y1=valueClose + lowerAverage,
                         line=lineStyleAverage, xref='x', yref='y'
                     )
+
+                markWidth = int(round(len(x) * 0.05))                
+                if takeProfitLevel != 0:
+                    fig.add_shape(
+                        type='line', x0=x[-markWidth], y0=takeProfitLevel, x1=x[-1], y1=takeProfitLevel, 
+                        line=dict(color='green', width=3), xref='x', yref='y'
+                    )
+                if stopLossLevel != 0:
+                    fig.add_shape(
+                        type='line', x0=x[-markWidth], y0=stopLossLevel, x1=x[-1], y1=stopLossLevel,
+                        line=dict(color='red', width=3), xref='x', yref='y'
+                    )
+                xp = x[-(markWidth*1)]
+                fig.add_trace(go.Scatter(
+                    x=[xp, xp], y=[takeProfitLevel, stopLossLevel], 
+                    text=["Take Profit Level", "Stop Loss Level"], mode="text", 
+                    textposition="middle left", textfont=dict(color=["green", "red"], family="sans serif", size=18)
+                    ))
             if self.centralLine:
                 lineStyleTrend = dict(color='orange', width=1)
                 fig.add_shape(
-                    type='line', x0=x[0], y0=close[0], x1=x[-1], y1=average, 
+                    type='line', x0=x[0], y0=valueOpen, x1=x[-1], y1=valueClose, 
                     line=lineStyleTrend, xref='x', yref='y'
                 )
             if fileName != "": 
@@ -195,67 +220,32 @@ class Report(Basics):
             return False
 
 
-    def summary(self, metrics:Metrics) -> MetricsSummary:
+    def summary(self, metrics:Metrics, quoteDecimals:int=10) -> MetricsSummary:
         '''
         Devuelve un objeto con un resumen de las metricas del mercado.\n
         param metrics:  Objeto con las metricas del mercado..
         return: Devuelve un con el resumen de las metricas del mercado.
         '''    
+        quoteDecimals = 2 if metrics["quote"] == "USDT" else 10
         result: MetricsSummary = {
-            "candles colapses": {
-                "value": metrics["candles"]["whole"]["percent"]["colapses"], 
-                "decimals": 2,
-                "measurementUnit": "%"
-            },
-            "candles completion": {
-                "value": metrics["candles"]["whole"]["percent"]["completion"], 
-                "decimals": 2,
-                "measurementUnit": "%"
-            },
-            "ticker 24h profit": {
-                "value": metrics["ticker"]["percentage"], 
-                "decimals": 2,
-                "measurementUnit": "%"
-            },
-            f"candles {round(metrics['candles']['lastQuarter']['count'])}h (last quarter) profit as %": {
-                "value": metrics["candles"]["lastQuarter"]["percent"]["changeOpenToAverage"], 
-                "decimals": 2,
-                "measurementUnit": "%"
-            },
-            f"candles {round(metrics['candles']['lastHalf']['count'])}h (last half) profit as %": {
-                "value": metrics["candles"]["lastHalf"]["percent"]["changeOpenToAverage"], 
-                "decimals": 2,
-                "measurementUnit": "%"
-            },
-            f"candles {round(metrics['candles']['whole']['count'])}h (whole) profit as %": {
-                "value": metrics["candles"]["whole"]["percent"]["changeOpenToAverage"], 
-                "decimals": 2,
-                "measurementUnit": "%"
-            },
-            "open": {
-                "value": metrics["candles"]["whole"]["open"], 
-                "decimals": 10,
-                "measurementUnit": metrics["quote"]
-            },
-            "low": {
-                "value": metrics["candles"]["whole"]["low"], 
-                "decimals": 10,
-                "measurementUnit": metrics["quote"]
-            },
-            "higt": {
-                "value": metrics["candles"]["whole"]["higt"], 
-                "decimals": 10,
-                "measurementUnit": metrics["quote"]
-            },
-            "close": {
-                "value": metrics["candles"]["whole"]["close"], 
-                "decimals": 10,
-                "measurementUnit": metrics["quote"]
-            }
+            "candles colapses": { "value": metrics["candles"]["percent"]["colapses"], "decimals": 2, "unit": "%" },
+            "candles completion": { "value": metrics["candles"]["percent"]["completion"], "decimals": 2, "unit": "%" },
+            "ticker 24h profit": { "value": metrics["ticker"]["percentage"], "decimals": 2, "unit": "%" },
+            f"candles half 1 profit:": { "value": metrics["candles"]["percent"]["changeHalf1"], "decimals": 2, "unit": "%" },
+            f"candles half 2 profit": { "value": metrics["candles"]["percent"]["changeHalf2"], "decimals": 2, "unit": "%" },
+            f"candles whole profit:": { "value": metrics["candles"]["percent"]["changeWhole"], "decimals": 2, "unit": "%" },
+            "open": { "value": metrics["candles"]["open"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "low": { "value": metrics["candles"]["low"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "higt": { "value": metrics["candles"]["higt"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "close": { "value": metrics["candles"]["close"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "expected profit": { "value": metrics["trading"]["profitPercent"], "decimals": 2, "unit": "%", "color": "green" },
+            "max acceptable loss": { "value": metrics["trading"]["maxLossPercent"], "decimals": 2, "unit": "%", "color": "red" },
+            "take profit level": { "value": metrics["trading"]["takeProfitLevel"], 
+                "decimals": quoteDecimals, "unit": metrics["quote"], "color": "green", "strong": True },
+            "stop loss level": { "value": metrics["trading"]["stopLossLevel"], 
+                "decimals": quoteDecimals, "unit": metrics["quote"], "color": "red", "strong": True },
+            "max time": { "value": metrics["trading"]["maxHours"], "decimals": 0, "unit": "hours" }
         }
         return result    
-    
-    
-    
     
     

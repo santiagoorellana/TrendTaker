@@ -154,7 +154,7 @@ class TrendTakerCore(Validations, Basics):
                             "baseData": self.exchangeInterface.get_currencies()[baseId],
                             "quoteData": self.exchangeInterface.get_currencies()[quoteId],
                             "candles1h": candles1h,
-                            "metrics": self.metrics.calculate(ticker, candles1h[0:candlesHours], preselected),
+                            "metrics": self.metrics.calculate(ticker, candles1h[0:candlesHours], preselected)
                         }              
                         msg1 = f'[{count} de {maxCount}] Se han obtenido los datos del mercado: {symbolId}'
                         if self.is_preselected(market, configuration):
@@ -214,7 +214,7 @@ class TrendTakerCore(Validations, Basics):
                 'fee': {                            # fee info, if available
                     'currency': quote,              # which currency the fee is (usually quote)
                     'cost': float(amount) * 0.002,  # the fee amount in that currency
-                    'rate': 0.002,                  # the fee rate (if available)
+                    'rate': 0.002                   # the fee rate (if available)
                 }       
             }
         else:
@@ -305,21 +305,7 @@ class TrendTakerCore(Validations, Basics):
         except Exception as e:
             self.log.exception(self.cmd(f'Error: Comprobando el balance de {currencyId}'))
             return False
-    
-    
-    
-    def calculate_profit_percent(self, metrics:MarketMetrics):
-        return None
-    
-    
-    def calculate_max_loss_percent(self, metrics:MarketMetrics):
-        return None
-    
-    
-    def calculate_max_hours(self, metrics:MarketMetrics):
-        return None
-    
-    
+        
   
     
 

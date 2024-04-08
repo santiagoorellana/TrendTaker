@@ -31,10 +31,10 @@ class Ledger(Basics):
         param balanceQuote: Balance existente en la cuenta de trading.
         return: Devuelve True si logra escribir el dato en Libro Mayor. De lo contrario devuelve False.
         '''
-        if not os.path.isfile(self.fileName):
+        if os.path.isfile(self.fileName):
             return FileManager.data_to_file_text(self._csv_line_from(order, balanceQuote), self.fileName, self.log)
         else:
-            self.log.exception(self.cmd(f'No existe el Libro Mayor (ledger): "{self.fileName}"'))
+            self.log.error(self.cmd(f'No existe el Libro Mayor (ledger): "{self.fileName}"'))
             return self._create_ledger_file()
     
     

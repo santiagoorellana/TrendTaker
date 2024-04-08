@@ -14,20 +14,10 @@ DIRECTORY_LEDGER = "./ledger/"
 DIRECTORY_GRAPHICS = "./graphics/"
 
 
-DEFAULT_CURRENT_INVESTMENT = {
-    "symbol": None,
-    "initialPrice": None,
-    "amountAsBase": None,
-    "initialDateTimeAsSeconds": None,
-    "ticker": None,
-    "balance": None
-}
-
-
 DEBUG_MODE = {
-    "ignoreInsufficientBalance": True,  # En True, hace que se ignore el balance insuficiente.
-    "simulateOrderExecution": True,     # En True, hace que las ordenes de compra y venta sean simuladas.    
-    "onlyBuyAndSell": None              # Ejecuta una compra y venta e el mercado especificado. Se desactiva con None.
+    "ignoreBalance": True,      # En True, hace que se ignore el balance insuficiente.
+    "simulateOrders": True,     # En True, hace que las ordenes de compra y venta sean simuladas.    
+    "onlyBuyAndSell": None      # Ejecuta una compra y venta e el mercado especificado. Se desactiva con None.
 }
 
 
@@ -95,7 +85,7 @@ class TrendTaker(Basics):
             self.log.info(self.cmd(f'El balance libre actual de {quote} es: {round(quoteBalance, 10)}', "\n"))
             if not self.config.data.get("amountIsPercentOfBalance", True):
                 param = "amountToInvestAsQuote"
-                if quoteBalance < float(self.config.data.get(param, 10)) * 2.5 and not DEBUG_MODE["ignoreInsufficientBalance"]:
+                if quoteBalance < float(self.config.data.get(param, 10)) * 2.5 and not DEBUG_MODE["ignoreBalance"]:
                     self.log.error(self.cmd(f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'))
                     self.log.info(self.cmd(f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'))
                     return False
@@ -192,7 +182,7 @@ class TrendTaker(Basics):
                             stopLossPrice = lastPrice * (1 + (maxLossPercent / 100)) 
 
                         # Ejecuta la orden de compra a precio de mercado, especificando takeProfit y stopLoss.
-                        debug = bool(DEBUG_MODE.get("simulateOrderExecution", False))
+                        debug = bool(DEBUG_MODE.get("simulateOrders", False))
                         order = self.core.execute_market('buy', symbolId, amountAsBase, takeProfitPrice, stopLossPrice, maxHours, debug)   
                                              
                         if order is not None:                        
@@ -264,7 +254,7 @@ class TrendTaker(Basics):
                     if lastPrice > 0:
                         initialPrice = float(investment['initialPrice'])
 
-                        order = self.core.execute_market('sell', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrderExecution", False)))
+                        order = self.core.execute_market('sell', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrders", False)))
                         if order is not None:                        
                             try:
                                 profit = round((float(order["average"]) - initialPrice) / initialPrice * 100, 2)
@@ -357,7 +347,7 @@ class TrendTaker(Basics):
         Ejecuta las operaciones de venta de los activos cuyo precio a cruzado los umbrales de 
         Take Profit o Stop Loss. Tambien ejecuta la venta si la inversion supera el tiempo maximo
         permitido para la inversion.\n
-        return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
+        return: True si logra actualizar el estado de las inversiones. False si ocurre un error.
         '''
         if self.currentInvestments is not None:
             listOfMarketsId = ListOfMarketsId(self.currentInvestments.keys())
@@ -443,7 +433,9 @@ class TrendTaker(Basics):
                             if self.get_list_of_valid_markets():
                                 self.initialExecutionDateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
                                 self.currentInvestmentsFileName = f'./{self.botId}_current_investment.json'
-                                self.load_current_investments()
+                                if self.load_current_investments():
+                                    pass
+                                    #self.actualize_current_investments()
                                 return True
         self.log.info(self.cmd('Terminado: No se puede continuar.'))
         return False
@@ -543,9 +535,9 @@ class TrendTaker(Basics):
                                 if self.invest_in(
                                         symbolId, 
                                         amountToInvestAsBase, 
-                                        self.core.calculate_profit_percent(marketData["metrics"]), 
-                                        self.core.calculate_max_loss_percent(marketData["metrics"]),
-                                        self.core.calculate_max_hours(marketData["metrics"]),
+                                        marketData["metrics"]["profitPercent"], 
+                                        marketData["metrics"]["maxLossPercent"],
+                                        marketData["metrics"]["maxHours"],
                                         self.config.data["modeActive"]["trailingStopEnable"]
                                     ):
                                     category = "openInvest"

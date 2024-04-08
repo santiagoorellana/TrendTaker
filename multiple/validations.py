@@ -194,23 +194,21 @@ class Validations(Basics):
         if base.upper() in preselected or base.lower() in preselected:
             return True
         filters = configuration["filters"]["candles"]
-        candlesWhole = marketData["metrics"]["candles"]["whole"]["percent"]
-        candlesLastHalf = marketData["metrics"]["candles"]["lastHalf"]["percent"]
-        candlesLastQuarter = marketData["metrics"]["candles"]["lastQuarter"]["percent"]
+        metricsOfCandles = marketData["metrics"]["candles"]["percent"]
         # Verifica si el porciento de velas colapsadas es minimo.
-        if not Validations.check(candlesWhole["colapses"], "below", filters.get("maxColapses", None)):
+        if not Validations.check(metricsOfCandles["colapses"], "below", filters.get("maxColapses", None)):
             return False
         # Verifica si el porciento de completado del rango de velas es adecuado.
-        if not Validations.check(candlesWhole["completion"], "above", filters.get("minCompletion", None)):
+        if not Validations.check(metricsOfCandles["completion"], "above", filters.get("minCompletion", None)):
             return False
         # Verifica si el profit del rango completo de velas es adecuado.
-        if not Validations.check(candlesWhole["changeOpenToAverage"], "above", filters.get("minProfitWhole", None)):
+        if not Validations.check(metricsOfCandles["changeWhole"], "above", filters.get("minProfitWhole", None)):
             return False
         # Verifica si el profit de la ultima mitad del rango de velas es adecuado.
-        if not Validations.check(candlesLastHalf["changeOpenToAverage"], "above", filters.get("minProfitLastHalf", None)):
+        if not Validations.check(metricsOfCandles["changeHalf1"], "above", filters.get("minProfitHalf1", None)):
             return False
         # Verifica si el profit del ultimo cuarto del rango de velas es adecuado.
-        if not Validations.check(candlesLastQuarter["changeOpenToAverage"], "above", filters.get("minProfitLastQuarter", None)):
+        if not Validations.check(metricsOfCandles["changeHalf2"], "above", filters.get("minProfitHalf2", None)):
             return False
         return True
 
