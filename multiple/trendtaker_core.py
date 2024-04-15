@@ -54,11 +54,11 @@ class TrendTakerCore(Validations, Basics):
             if currencies is None:
                 return None
             for symbol in markets:
-                quote = self.exchangeInterface.quote_of_symbol(symbol)
+                quote = self.quote_of_symbol(symbol)
                 if quote == quoteCurrency:
                     symbolData = markets.get(symbol, None)
                     if symbolData is not None:
-                        base = self.exchangeInterface.base_of_symbol(symbol)
+                        base = self.base_of_symbol(symbol)
                         if self.is_valid_market(
                                 symbolData,
                                 currencies.get(base, None),
@@ -99,20 +99,22 @@ class TrendTakerCore(Validations, Basics):
                             selected.append(tickerData)
             self.log.info(self.cmd(f'Cantidad de mercados creciendo en las ultimas 24 horas: {len(selected)}', '', '\n'))
             try:
-                preselected = configuration.get("preselected", [])
                 result = sorted(
                     selected, 
                     key=lambda x: float(x["percentage"]) 
-                        if str(self.exchangeInterface.base_of_symbol(x["symbol"])).lower() not in preselected \
-                            and str(self.exchangeInterface.base_of_symbol(x["symbol"])).upper() not in preselected
+                        if not self.is_preselected(self.base_of_symbol(x["symbol"]), configuration)
                         else 1000000, 
                     reverse=True
                 )
                 result = result[0:configuration.get("maxTickersToSelect", 100)]
-                for ticker in result:
-                    self.cmd(f'{ticker["symbol"]} creciendo en las ultimas 24 horas: {ticker["percentage"]}')
-                    time.sleep(0.1)
-                self.cmd('\n')
+                if len(result) > 0:
+                    self.cmd(f'Primeros {len(result)} mercados creciendo en las ultimas 24 horas:')
+                    for ticker in result:
+                        baseId = self.base_of_symbol(ticker["symbol"]) 
+                        preselectedLabel = '[PRESELECTED]' if self.is_preselected(baseId, configuration) else ''
+                        self.cmd(f'{ticker["percentage"]} %   {ticker["symbol"]}   {preselectedLabel}')
+                        time.sleep(0.1)
+                    self.cmd('\n')
                 return result
             except Exception as e:
                 self.log.exception(f'{self.cmd("Error: Ordenando los tickers filtrados de mercados validos.")} Exception: {str(e)}')
@@ -140,8 +142,8 @@ class TrendTakerCore(Validations, Basics):
             for ticker in validTickers:
                 count += 1
                 symbolId = ticker['symbol']
-                baseId = self.exchangeInterface.base_of_symbol(symbolId)
-                quoteId = self.exchangeInterface.quote_of_symbol(symbolId)
+                baseId = self.base_of_symbol(symbolId)
+                quoteId = self.quote_of_symbol(symbolId)
                 candles1h = self.exchangeInterface.get_last_candles(symbolId, candlesHours, "1h")
                 if candles1h is not None:
                     if len(candles1h) >= candlesHours:      # Si el mercado tiene la cantidad de velas pedidas...
@@ -156,16 +158,18 @@ class TrendTakerCore(Validations, Basics):
                             "candles1h": candles1h,
                             "metrics": self.metrics.calculate(ticker, candles1h[0:candlesHours], preselected)
                         }              
-                        msg1 = f'[{count} de {maxCount}] Se han obtenido los datos del mercado: {symbolId}'
-                        if self.is_preselected(market, configuration):
+                        msg1 = f'Se han obtenido los datos del mercado: {symbolId}'
+                        if self.is_preselected(market["baseId"], configuration):
+                            market["preselected"] = True
                             marketsData.append(market)
                             msg1 = f"{msg1}  [PRESELECTED]"
                         elif self.is_potential_market(market, configuration):
+                            market["preselected"] = False
                             marketsData.append(market)
                             msg1 = f"{msg1}  [POTENCIAL]"
-                        self.log.info(self.cmd(msg1))
+                        self.log.info(self.cmd(msg1, f'[{count} de {maxCount}] '))
                     else:
-                        self.log.info(self.cmd(f"No hay suficientes velas en el mercado {symbolId}"))                        
+                        self.log.info(self.cmd(f"No hay suficientes velas en el mercado {symbolId}", f'[{count} de {maxCount}] '))                        
                 else:
                     self.log.warning(self.cmd(f"No se pudieron obtener las velas del mercado {symbolId}"))
                 time.sleep(0.1)
@@ -189,7 +193,7 @@ class TrendTakerCore(Validations, Basics):
         return: Devuelve un Dict con datos de operacion ficticios. 
                 Devuelve None si ocurre un error.
         '''
-        quote = self.exchangeInterface.quote_of_symbol(symbol)
+        quote = self.quote_of_symbol(symbol)
         ticker = self.exchangeInterface.get_ticker(symbol)
         if ticker is not None:
             price = float(ticker["last"])
@@ -292,13 +296,17 @@ class TrendTakerCore(Validations, Basics):
         '''
         currencyId = ""
         try:
-            currencyId = self.exchangeInterface.quote_of_symbol(marketId)
+            currencyId = self.quote_of_symbol(marketId)
             currentBalance = self.exchangeInterface.get_balance()
             if currentBalance is not None:
                 takerFeeRate = float(self.exchangeInterface.get_markets()[marketId]["taker"])
                 necessaryCurrencyBalance = amountQuoteToBuy + (amountQuoteToBuy * takerFeeRate)
                 availableCurrencyBalance = float(currentBalance['free'][currencyId])
-                return availableCurrencyBalance >= necessaryCurrencyBalance
+                if availableCurrencyBalance < necessaryCurrencyBalance:
+                    self.log.warning(self.cmd(f'No hay suficiente {currencyId} para comprar.', f'{INDENT}Atencion! '))
+                    self.log.warning(self.cmd(f'Solo hay {round(availableCurrencyBalance, 2)} {currencyId} disponibles.', f'{INDENT}Atencion! '))
+                    return False
+                return True
             else:
                 self.log.error(self.cmd(f'Error: No se pudo obtener el balance actual de {currencyId}'))
                 return False

@@ -27,7 +27,7 @@ class Report(Basics):
         self.directory = directory
         self.subdirectory = ""
         self.extension = extension
-        self.dataMarket1:List[Dict] = []
+        self.dataMarket1:List[MarketData] = []
         self.fileName = ""
         self.showLists = False
         self.centralLine = True
@@ -61,7 +61,7 @@ class Report(Basics):
         return f'{self.botId}_{self.exchangeId}__{dateTimeLabel}.{self.extension}' 
     
 
-    def append_market_data(self, imageFileName:str, data:Dict, category:Category) -> bool:
+    def append_market_data(self, imageFileName:str, data:MarketData) -> bool:
         '''
         Agrega a los datos de la web un fichero de imagen y datos descriptivos.
         param imageFileName: Nombre y ruta de un fichero de imagen existente.
@@ -93,22 +93,39 @@ class Report(Basics):
         try:
             self.fileName = f"{self.subdirectory}index.html"
             with open(self.fileName, 'a') as file:
-                file.write("<html><head><title>Markets</title></head><body><table>\n")
-                for market in self.dataMarket1:
-                    file.write("<tr>\n")
-                    file.write(f"<td><img src='{market['imageFileName']}' width='800px'></img></td>\n")
-                    file.write("<td>")
-                    summary = self.summary(market["data"])
-                    for key in summary.keys():
-                        param = summary[key]
-                        valueStr = str(f'{round(param["value"], param["decimals"])} {param["unit"]}')
-                        color = param.get("color", '#0000ff')
-                        if param.get("strong", False):
-                            valueStr = f"<strong>{valueStr}</strong>"
-                        file.write(f"<strong>{key}</strong>: <font color='{color}'>{valueStr}</font><br>\n")                    
-                    file.write("</td>\n")
-                    file.write("</tr>\n")
-                file.write("</table></body></html>\n")
+                file.write("<html><head><title>Markets</title></head><body>\n")
+
+                cases = [
+                    {"status":True, "title":"Inversiones abiertas"}, 
+                    {"status":False, "title":"Otros mercados con potencial"}, 
+                ]
+                for case in cases:
+                    file.write(f'<h1>{case["title"]}</h1>\n')
+                    file.write("<table>\n")
+                    count = 0
+                    for market in self.dataMarket1:
+                        if market["data"]["openInvest"] == case["status"]:
+                            count += 1
+                            file.write("<tr>\n")
+                            file.write(f"<td><img src='{market['imageFileName']}' width='800px'></img></td>\n")
+                            file.write("<td>")
+                            summary = self.summary(market["data"])
+                            for key in summary.keys():
+                                param = summary[key]
+                                if type(param["value"]) == str:
+                                    valueStr = str(f'{param["value"]} {param["unit"]}')
+                                else:
+                                    valueStr = str(f'{round(param["value"], param["decimals"])} {param["unit"]}')
+                                color = param.get("color", '#0000ff')
+                                if param.get("strong", False):
+                                    valueStr = f"<strong>{valueStr}</strong>"
+                                file.write(f"<strong>{key}</strong>: <font color='{color}'>{valueStr}</font><br>\n")                    
+                        file.write("</td>\n</tr>\n")
+                    if count == 0:
+                        file.write("<h5>No hay datos</h5>\n")
+                    file.write("</table>\n")
+                    
+                file.write("</body></html>\n")
                 if openInBrowser:
                     self.open_web()
                 return True
@@ -220,24 +237,25 @@ class Report(Basics):
             return False
 
 
-    def summary(self, metrics:Metrics, quoteDecimals:int=10) -> MetricsSummary:
+    def summary(self, marketData:MarketData, quoteDecimals:int=10) -> MetricsSummary:
         '''
         Devuelve un objeto con un resumen de las metricas del mercado.\n
         param metrics:  Objeto con las metricas del mercado..
         return: Devuelve un con el resumen de las metricas del mercado.
         '''    
-        quoteDecimals = 2 if metrics["quote"] == "USDT" else 10
+        metrics = marketData["metrics"]
         result: MetricsSummary = {
+            "preselected market": { "value": "SI" if marketData["preselected"] else "NO", "decimals": 0, "unit": "" },
             "candles colapses": { "value": metrics["candles"]["percent"]["colapses"], "decimals": 2, "unit": "%" },
             "candles completion": { "value": metrics["candles"]["percent"]["completion"], "decimals": 2, "unit": "%" },
             "ticker 24h profit": { "value": metrics["ticker"]["percentage"], "decimals": 2, "unit": "%" },
-            f"candles half 1 profit:": { "value": metrics["candles"]["percent"]["changeHalf1"], "decimals": 2, "unit": "%" },
-            f"candles half 2 profit": { "value": metrics["candles"]["percent"]["changeHalf2"], "decimals": 2, "unit": "%" },
-            f"candles whole profit:": { "value": metrics["candles"]["percent"]["changeWhole"], "decimals": 2, "unit": "%" },
-            "open": { "value": metrics["candles"]["open"], "decimals": quoteDecimals, "unit": metrics["quote"] },
-            "low": { "value": metrics["candles"]["low"], "decimals": quoteDecimals, "unit": metrics["quote"] },
-            "higt": { "value": metrics["candles"]["higt"], "decimals": quoteDecimals, "unit": metrics["quote"] },
-            "close": { "value": metrics["candles"]["close"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            f"Trend profit half 1:": { "value": metrics["candles"]["percent"]["changeHalf1"], "decimals": 2, "unit": "%" },
+            f"Trend profit half 2": { "value": metrics["candles"]["percent"]["changeHalf2"], "decimals": 2, "unit": "%" },
+            f"Trend profit whole:": { "value": metrics["candles"]["percent"]["changeWhole"], "decimals": 2, "unit": "%" },
+            "Trend Open": { "value": metrics["candles"]["open"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "Trend Low": { "value": metrics["candles"]["low"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "Trend Higt": { "value": metrics["candles"]["higt"], "decimals": quoteDecimals, "unit": metrics["quote"] },
+            "Trend Close": { "value": metrics["candles"]["close"], "decimals": quoteDecimals, "unit": metrics["quote"] },
             "expected profit": { "value": metrics["trading"]["profitPercent"], "decimals": 2, "unit": "%", "color": "green" },
             "max acceptable loss": { "value": metrics["trading"]["maxLossPercent"], "decimals": 2, "unit": "%", "color": "red" },
             "take profit level": { "value": metrics["trading"]["takeProfitLevel"], 

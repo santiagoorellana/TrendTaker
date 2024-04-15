@@ -1,6 +1,7 @@
 
 from typing import Dict, List, Literal, Optional
-from exchange_interface import *
+from basics import *
+from exchange_interface import CANDLE_LOW, CANDLE_HIGT, CANDLE_CLOSE
 
 Metrics = Dict
 MetricsSummary = Dict
@@ -27,8 +28,8 @@ class MarketMetrics():
         return: Devuelve un objeto con las metricas del mercado.
         '''    
         metrics: Metrics = {"completed": False}
-        metrics["base"] = ExchangeInterface.base_of_symbol(ticker["symbol"])
-        metrics["quote"] = ExchangeInterface.quote_of_symbol(ticker["symbol"])
+        metrics["base"] = Basics.base_of_symbol(ticker["symbol"])
+        metrics["quote"] = Basics.quote_of_symbol(ticker["symbol"])
         metrics["ticker"] = MarketMetrics._ticker_statistics(ticker)
         metrics["candles"] = MarketMetrics._candles_statistics(candles1h)
         metrics["trading"] = MarketMetrics._trading_parameters(metrics)
@@ -94,7 +95,7 @@ class MarketMetrics():
         if str(metrics["base"]).upper() in preselected or str(metrics["base"]).lower() in preselected:
             return float(1000000000)
         tickerProfitRatio = float(metrics["ticker"]["percentage"]) / 100
-        candlesProfitRatio = float(metrics["candles"]["percent"]["changeWhole"])
+        candlesProfitRatio = float(metrics["candles"]["percent"]["changeWhole"]) / 100
         return float(tickerProfitRatio * candlesProfitRatio)
 
 

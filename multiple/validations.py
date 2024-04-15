@@ -55,8 +55,8 @@ class Validations(Basics):
         return: True si el valor "amountAsBase" esta dentro de los limites permitidos. False si esta fuera de los limites.
         '''
         symbolId = symbolData['symbol']
-        base = ExchangeInterface.base_of_symbol(symbolId)
-        quote = ExchangeInterface.quote_of_symbol(symbolId)
+        base = Basics.base_of_symbol(symbolId)
+        quote = Basics.quote_of_symbol(symbolId)
         decimals = 2 if quote.upper() == "USDT" else 12
         amountMin = Validations.get_market_limit("min", symbolData)
         amountMax = Validations.get_market_limit("max", symbolData)
@@ -136,12 +136,14 @@ class Validations(Basics):
     def is_valid_ticker(tickerData:Ticker, configuration:Dict) -> bool:
         '''
         Verifica si el ticker pertenecen a un mercado valido que cumple las condiciones de seleccion del filtro.\n
+        Si el ticker pertenece a un mercado preseleccionado, se verifica como valido.\n
         param tickerData: Objeto ticker obtenido del exchange, mediante la librería ccxt. 
         param configuration: Objeto con la configuracion del algoritmo.
-        return: True si el ticker es un mercado valido que cumple las con el filtro. De lo contrario False.
+        return: True si el ticker es un mercado valido que cumple las con el filtro o si es preseleccionado. 
+        De lo contrario False.
         '''
         preselected = configuration.get("preselected", [])
-        base = str(ExchangeInterface.base_of_symbol(tickerData["symbol"]))
+        base = str(Basics.base_of_symbol(tickerData["symbol"]))
         if base.upper() in preselected or base.lower() in preselected:
             return True
         if tickerData is None:
@@ -166,7 +168,7 @@ class Validations(Basics):
 
 
     @staticmethod
-    def is_preselected(marketData, configuration:Dict) -> bool:
+    def is_preselected(baseId, configuration:Dict) -> bool:
         '''
         Devuelve true si el mercado esta preseleccionado.\n
         param marketData: Datos y parametros del mercado que se deben comprobar.
@@ -174,8 +176,7 @@ class Validations(Basics):
         return: Devuelve True si el mercado esta preseleccionado. De lo contrario, devuelve False.
         '''        
         preselected = configuration.get("preselected", [])
-        base = str(marketData["baseId"])
-        if base.upper() in preselected or base.lower() in preselected:
+        if baseId.upper() in preselected or baseId.lower() in preselected:
             return True
         else:
             return False

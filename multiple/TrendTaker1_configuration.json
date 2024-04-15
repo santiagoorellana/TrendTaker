@@ -2,17 +2,26 @@
     "debugMode": false,
     "forceCloseInvestmentAndExit": false,
     "currencyQuote": "USDT",
-    "amountToInvestAsQuote": "10",
+    "amountToInvestAsQuote": 30,
     "amountIsPercentOfBalance": false,
-    "blackList": ["DEMONIO", "KILLER"],
-    "preselected": [],
-    "maxCurrenciesToInvest": 10,
-    "graphSave": true,
-    "graphShow": true,
-    "telegramToken": "",
-    "telegramChatId": "",
+    "blackList": [
+        "DEMONIO",
+        "KILLER"
+    ],
+    "preselected": [
+        "BTC",
+        "ETH"
+    ],
+    "maxCurrenciesToInvest": 20,
+    "createWebReport": true,
+    "showWebReport": true,
     "maxTickersToSelect": 50,
     "candlesDays": 7,
+    "modeActive": {
+        "enable": false,
+        "profitPercent": 3,
+        "trailingStopEnable": false
+    },
     "filters": {
         "note": "Todos los valores de filtro se expresan en porciento.",
         "tickers": {
@@ -22,11 +31,11 @@
             "minProfitOverAmplitude": 33
         },
         "candles": {
-            "maxColapses": 20,
+            "maxColapses": 30,
             "minCompletion": 85,
-            "minProfitWhole": 1,
-            "minProfitLastHalf": 0,
-            "minProfitLastQuarter": 0
+            "minProfitWhole": 1.0,
+            "minProfitHalf1": 0.0,
+            "minProfitHalf2": 0.0
         }
     }
 }

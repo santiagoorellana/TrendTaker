@@ -7,11 +7,11 @@ DEFAULT_CONFIGURATION = {
     "debugMode": False,
     "forceCloseInvestmentAndExit": False,
     "currencyQuote": "USDT",
-    "amountToInvestAsQuote": 10,
+    "amountToInvestAsQuote": 20,
     "amountIsPercentOfBalance": False,
     "blackList": ["DEMONIO", "KILLER"],
     "preselected": ["BTC", "ETH"],
-    "maxCurrenciesToInvest": 10,
+    "maxCurrenciesToInvest": 20,
     "createWebReport": True,
     "showWebReport": True,
     "maxTickersToSelect": 50,
@@ -26,15 +26,15 @@ DEFAULT_CONFIGURATION = {
         "tickers": {
             "minProfit": 0,
             "maxSpread": 1,
-             "maxSpreadOverProfit": 33,
+            "maxSpreadOverProfit": 33,
             "minProfitOverAmplitude": 33
         },
         "candles": {
-            "maxColapses": 20,
+            "maxColapses": 30,
             "minCompletion": 85,
-            "minProfitWhole": 3.0,
-            "minProfitHalf1": 1.0,
-            "minProfitHalf2": 1.0
+            "minProfitWhole": 1.0,
+            "minProfitHalf1": 0.0,
+            "minProfitHalf2": 0.0
         }
     }
 }

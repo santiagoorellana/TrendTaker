@@ -2,7 +2,7 @@
     "debugMode": false,
     "forceCloseInvestmentAndExit": false,
     "currencyQuote": "USDT",
-    "amountToInvestAsQuote": 10,
+    "amountToInvestAsQuote": 20,
     "amountIsPercentOfBalance": false,
     "blackList": [
         "DEMONIO",
@@ -12,7 +12,7 @@
         "BTC",
         "ETH"
     ],
-    "maxCurrenciesToInvest": 10,
+    "maxCurrenciesToInvest": 20,
     "createWebReport": true,
     "showWebReport": true,
     "maxTickersToSelect": 50,
@@ -31,11 +31,11 @@
             "minProfitOverAmplitude": 33
         },
         "candles": {
-            "maxColapses": 20,
+            "maxColapses": 30,
             "minCompletion": 85,
-            "minProfitWhole": 3.0,
-            "minProfitHalf1": 1.0,
-            "minProfitHalf2": 1.0
+            "minProfitWhole": 1.0,
+            "minProfitHalf1": 0.0,
+            "minProfitHalf2": 0.0
         }
     }
 }

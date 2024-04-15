@@ -154,8 +154,8 @@ class TrendTaker(Basics):
         if market is not None:
             ticker = self.core.exchangeInterface.get_ticker(symbolId)
             if ticker is not None:
-                base = self.core.exchangeInterface.base_of_symbol(symbolId)
-                quote = self.core.exchangeInterface.quote_of_symbol(symbolId)
+                base = self.base_of_symbol(symbolId)
+                quote = self.quote_of_symbol(symbolId)
                 self.currentBalance = self.core.exchangeInterface.get_balance()
                 if self.currentBalance is None:
                     self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
@@ -213,6 +213,7 @@ class TrendTaker(Basics):
                             self.log.info(f'{msg1} {msg2} {msg3} {msg4}')
                             self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n')
                             return True
+                    self.log.error(f'Error: No se pudo ejecutar la orden el mercado {symbolId}')                            
                 else:
                     msg1 = f'Error: No se pudo obtener el precio del ticker del mercado {symbolId}'
                     self.log.error(f'{self.cmd(msg1)}. Ticker: {ticker}')
@@ -240,8 +241,8 @@ class TrendTaker(Basics):
             if market is not None:
                 ticker = self.core.exchangeInterface.get_ticker(symbolId)
                 if ticker is not None:
-                    base = self.core.exchangeInterface.base_of_symbol(symbolId)
-                    quote = self.core.exchangeInterface.quote_of_symbol(symbolId)
+                    base = self.base_of_symbol(symbolId)
+                    quote = self.quote_of_symbol(symbolId)
                     self.currentBalance = self.core.exchangeInterface.get_balance()
                     if self.currentBalance is None:
                         self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
@@ -323,8 +324,8 @@ class TrendTaker(Basics):
                 investment = currentInvestmentsData[key]
                 if self.core.is_valid_current_investment_structure(investment): 
                     symbolId = investment["symbol"]
-                    base = self.core.exchangeInterface.base_of_symbol(investment["symbol"])
-                    quote = self.core.exchangeInterface.quote_of_symbol(investment["symbol"])                                
+                    base = self.base_of_symbol(investment["symbol"])
+                    quote = self.quote_of_symbol(investment["symbol"])                                
                     msg1 = f'Inversion actual en {investment["symbol"]}'
                     msg2 = f'cantidad comprada: {investment["amountAsBase"]} {base}'
                     msg3 = f'precio de compra: {investment["initialPrice"]} {quote}'
@@ -528,7 +529,7 @@ class TrendTaker(Basics):
                     graphFileName = report.create_unique_filename()
                     graphTitle = f'{self.botId} {self.exchangeId} {symbolId}'
                     report.create_graph(marketData["candles1h"], graphTitle, graphFileName, marketData["metrics"], False)           
-                    category:Category = "potentialMarket"             
+                    marketData["openInvest"] = False         
                     if symbolId not in self.currentInvestments:
                         if self.core.sufficient_quote_to_buy(amountToInvestAsQuote, symbolId):
                             if self.config.data["modeActive"]["enable"]:
@@ -540,11 +541,11 @@ class TrendTaker(Basics):
                                         marketData["metrics"]["maxHours"],
                                         self.config.data["modeActive"]["trailingStopEnable"]
                                     ):
-                                    category = "openInvest"
+                                    marketData["openInvest"] = True 
                             else:
                                 if self.invest_in(symbolId, amountToInvestAsBase):
-                                    category = "openInvest"                                
-                    report.append_market_data(graphFileName, marketData["metrics"], category)
+                                    marketData["openInvest"] = True                               
+                    report.append_market_data(graphFileName, marketData)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
         if len(self.currentInvestments) == 0:
@@ -554,8 +555,8 @@ class TrendTaker(Basics):
 
 
 if __name__ == "__main__":
-    credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').read())
-    #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
+    #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').read())
+    credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
     bot = TrendTaker('TrendTaker1', credentials['exchange'], credentials['key'], credentials['secret'])
     bot.execute()    
  

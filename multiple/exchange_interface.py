@@ -25,30 +25,6 @@ class ExchangeInterface(Basics):
         self.insistencePauseSeconds: int = INSISTENCE_PAUSE_SECONDS
         self.log = logging.getLogger(logName)
 
-
-    @staticmethod
-    def base_of_symbol(symbol:MarketId) -> CurrencyId:
-        '''
-        param symbol: Idetificador de symbol compuesto por la estructura "base/quote". 
-        return: Devuelve el idetificador de la currency base. Si hay error, devuelve cadena vacia.
-        '''
-        try:
-            return str(symbol).split('/')[0]
-        except Exception as e:
-            return ""
-            
-
-    @staticmethod
-    def quote_of_symbol(symbol:MarketId) -> CurrencyId:
-        '''
-        param symbol: Idetificador de symbol compuesto por la estructura "base/quote". 
-        return: Devuelve el idetificador de la currency quote. Si hay error, devuelve cadena vacia.
-        '''
-        try:
-            return str(symbol).split('/')[1]
-        except Exception as e:
-            return ""
-        
         
     def select_exchange(self, exchangeId:str, apiKey:str, secret:str) -> bool:
         '''
