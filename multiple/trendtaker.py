@@ -3,15 +3,10 @@ import time
 from trendtaker_core import *
 import json
 from report import *
-from ledger import Ledger
 from exchange_interface import *
 from configuration import *
 from file_manager import *
 from basics import *
-
-DIRECTORY_LOGS = "./logs/"
-DIRECTORY_LEDGER = "./ledger/"
-DIRECTORY_GRAPHICS = "./graphics/"
 
 
 DEBUG_MODE = {
@@ -33,8 +28,6 @@ class TrendTaker(Basics):
         self.config = Configuration(botId)
         self.initialBalance:Balance = {}
         self.currentBalance:Optional[Balance] = None
-        self.currentInvestments:CurrentInvestments = {}
-        self.totalFeeAsQuote:float = 0
         
     
     def create_handler_of_logging(self) -> bool:
@@ -185,27 +178,9 @@ class TrendTaker(Basics):
                         debug = bool(DEBUG_MODE.get("simulateOrders", False))
                         order = self.core.execute_market('buy', symbolId, amountAsBase, takeProfitPrice, stopLossPrice, maxHours, debug)   
                                              
-                        if order is not None:                        
-                            self.currentInvestments[symbolId] = {
-                                "orderId": order["id"],
-                                "symbol": symbolId,
-                                "lastTickerPrice": lastPrice,
-                                "initialPrice": order["average"],
-                                "amountAsBase": order["amount"],
-                                "initialDateTimeAsSeconds": self.core.exchangeInterface.exchange.seconds(),
-                                "fee": order["fee"]["cost"],
-                                "profitPercent": profitPercent, 
-                                "maxLossPercent": maxLossPercent, 
-                                "trailingStop": trailingStop,
-                                "takeProfitPrice": takeProfitPrice,
-                                "stopLossPrice": stopLossPrice,
-                                "maxHours": maxHours
-                            }
-                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log)
-                            self.totalFeeAsQuote += float(order["fee"]["cost"])
-                            
-                            self.ledger.write(order, balanceQuote)
-                            
+                        if order is not None:       
+                            self.core.investments.open(symbolId, amountAsBase, lastPrice, order, balanceQuote, profitPercent, 
+                                maxLossPercent, trailingStop, takeProfitPrice, stopLossPrice, maxHours)                            
                             msg1 = f'INVERSION ABIERTA en {symbolId}'
                             msg2 = f'cantidad comprada: {order["filled"]} {base}'
                             msg3 = f'valor aproximado: {float(order["filled"]) * float(order["average"])} {quote}'
@@ -232,10 +207,13 @@ class TrendTaker(Basics):
         Vende la misma cantidad de activo que se compro al momento de invertir.\n
         return: True si logra cerrar la inversion. False si no la cierra.
         '''
-        if symbolId not in self.currentInvestments:
-            self.log.error(self.cmd(f'Error: No se encuentran datos de la inversion actual en el mercado {symbolId}'))
+        if not self.core.investments.contains(symbolId):
+            self.log.error(self.cmd(f'Error: No se encuentran los datos de inversion actual en el mercado {symbolId}'))
             return False
-        investment = self.currentInvestments[symbolId]
+        investment = self.core.investments.get(symbolId)
+        if investment is None:
+            self.log.error(self.cmd(f'Error: No se pudo obtener los datos de inversion actual en el mercado {symbolId}'))
+            return False            
         if symbolId is not None:
             market = self.core.exchangeInterface.get_markets()[symbolId]
             if market is not None:
@@ -243,13 +221,6 @@ class TrendTaker(Basics):
                 if ticker is not None:
                     base = self.base_of_symbol(symbolId)
                     quote = self.quote_of_symbol(symbolId)
-                    self.currentBalance = self.core.exchangeInterface.get_balance()
-                    if self.currentBalance is None:
-                        self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
-                        balanceQuote = float(0)
-                    else:
-                        balanceQuote = float(self.currentBalance["free"][quote])
-                    
                     amountAsBase = float(investment['amountAsBase'])
                     lastPrice = float(ticker.get("last", 0))
                     if lastPrice > 0:
@@ -257,34 +228,21 @@ class TrendTaker(Basics):
 
                         order = self.core.execute_market('sell', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrders", False)))
                         if order is not None:                        
-                            try:
-                                profit = round((float(order["average"]) - initialPrice) / initialPrice * 100, 2)
-                            except:
-                                profit = None
-                            try:
-                                initial = float(self.initialBalance['free'][quote])
-                                current = float(self.currentBalance['free'][quote]) if self.currentBalance is not None else initial
-                                profitTotal = round((current - initial) / initial * 100, 2)
-                            except:
-                                profitTotal = None
-                            dateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
-                            hours = (dateTimeAsSeconds - investment['initialDateTimeAsSeconds']) / (60 * 60)
-                            hoursTotal = (dateTimeAsSeconds - self.initialExecutionDateTimeAsSeconds) / (60 * 60)
-                            
-                            del self.currentInvestments[symbolId]
-                            FileManager.data_to_file_json(self.currentInvestments, self.currentInvestmentsFileName, self.log)
-                            self.totalFeeAsQuote += float(order["fee"]["cost"])
-
-                            self.ledger.write(order, balanceQuote)
-                            
+                            self.currentBalance = self.core.exchangeInterface.get_balance()
+                            if self.currentBalance is None:
+                                self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
+                                balanceQuote = float(0)
+                            else:
+                                balanceQuote = float(self.currentBalance["free"][quote])                            
+                            invest = self.core.investments.close(symbolId, order, balanceQuote)                            
                             msg1 = f'INVERSION CERRADA en {symbolId}'
                             msg2 = f'cantidad vendida: {order["filled"]} {base}'
                             msg3 = f'valor aproximado: {float(order["filled"]) * float(order["average"])} {quote}'
                             msg4 = f'precio de compra: {initialPrice} {quote}'
                             msg5 = f'precio de venta: {order["average"]} {quote}'
-                            msg6 = f'profit de inversion: {profit}% en {round(hours, 2)} horas'
-                            msg7 = f'profit total: {profitTotal}% en {round(hoursTotal, 2)} horas'
-                            msg8 = f'fee total: {round(self.totalFeeAsQuote, 2)} {quote} en {round(hoursTotal, 2)} horas'
+                            msg6 = f'profit de inversion: {invest["result"][""]}% en {round(invest["result"][""], 2)} horas'
+                            msg7 = f'profit total: {round(invest["result"]["profitAsPercent"], 2)}% en {round(invest[""], 2)} horas'
+                            msg8 = f'profit total: {round(invest["result"]["profitAsPercent"], 2)}% en {round(invest[""], 2)} horas'
                             self.log.info(f'{msg1} {msg2} {msg3} {msg4} {msg5} {msg6} {msg7} {msg8}')
                             self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n   {msg5}\n   {msg6}\n   {msg7}\n   {msg8}\n')
                             return True
@@ -299,46 +257,7 @@ class TrendTaker(Basics):
             return False
         else:
             return True
-
-
-    
         
-    def load_current_investments(self) -> bool:
-        '''
-        Carga desde un fichero los datos de las inversiones actuales en curso.\n
-        return: True si encuentra un fichero y logra cargar los datos. False si no se cargan datos.
-        '''
-        currentInvestmentsData = FileManager.data_from_file_json(self.currentInvestmentsFileName, False, self.log)
-        if currentInvestmentsData is not None:
-            msg1 = f'Se ha encontrado un fichero de datos de inversiones actuales": "{self.currentInvestmentsFileName}"'
-            self.log.info(self.cmd(msg1))
-            if type(currentInvestmentsData) != Dict:
-                self.log.error(self.cmd('Error: La estructura del fichero de datos de inversiones actuales no es correcta.'))
-                return False
-            if len(currentInvestmentsData) == 0:
-                self.log.error(self.cmd('El fichero de datos de inversiones actuales no contiene datos.'))
-                return True
-            else:
-                self.log.error(self.cmd(f'Cantidad de inversiones actuales: {len(currentInvestmentsData)}'))
-            for key in currentInvestmentsData.keys():
-                investment = currentInvestmentsData[key]
-                if self.core.is_valid_current_investment_structure(investment): 
-                    symbolId = investment["symbol"]
-                    base = self.base_of_symbol(investment["symbol"])
-                    quote = self.quote_of_symbol(investment["symbol"])                                
-                    msg1 = f'Inversion actual en {investment["symbol"]}'
-                    msg2 = f'cantidad comprada: {investment["amountAsBase"]} {base}'
-                    msg3 = f'precio de compra: {investment["initialPrice"]} {quote}'
-                    self.log.info(f'{msg1} {msg2} {msg3}')
-                    self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n')
-
-                    self.currentInvestments[symbolId] = investment
-                    #self.initialExecutionDateTimeAsSeconds = data["initialDateTimeAsSeconds"] # debe quedarse con el mas antiguo.
-                    self.log.info(self.cmd(f'Se han cargado los datos de la iversion actual en {symbolId}.'))
-                else:
-                    self.log.error(self.cmd(f'Error en los datos de la inversion en el mercado {symbolId}'))
-        return False
-
 
 
 
@@ -350,13 +269,12 @@ class TrendTaker(Basics):
         permitido para la inversion.\n
         return: True si logra actualizar el estado de las inversiones. False si ocurre un error.
         '''
-        if self.currentInvestments is not None:
-            listOfMarketsId = ListOfMarketsId(self.currentInvestments.keys())
-            for marketId in listOfMarketsId:
-                investment = self.currentInvestments[marketId]
+        if not self.core.investments.empty():
+            for marketId in self.core.investments.markets():
+                investment = self.core.investments.get(marketId)
                 openInvesting = True
                 ticker = self.core.exchangeInterface.get_ticker(marketId)
-                if ticker is not None:
+                if ticker is not None and investment is not None:
                     actualPrice = float(ticker["last"])
                     
                     if openInvesting:
@@ -383,8 +301,8 @@ class TrendTaker(Basics):
                         else:
                             maxHours = int(self.config.data["candlesDays"]) * 24
                         dateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
-                        initialDateTimeAsSeconds = int(investment["initialDateTimeAsSeconds"])
-                        hours = float((dateTimeAsSeconds - initialDateTimeAsSeconds) / 60 / 60)
+                        initialTimestampSeconds = int(investment["initialTimestampSeconds"])
+                        hours = float((dateTimeAsSeconds - initialTimestampSeconds) / 60 / 60)
                         if hours >= maxHours:
                             self.log.info(self.cmd(f'TIME STOP activado en {marketId}', '\n'))
                             openInvesting = not self.close_investment(marketId)
@@ -408,7 +326,6 @@ class TrendTaker(Basics):
         - Crea los directorios necesarios si no existen.
         - Crea el handler de los ficheros log.
         - Crea el objeto core que contiene funciones basicas y de acceso al exchange.
-        - Inicia el libro mayor (ledger)
         - Carga la configuracion desde un fichero si existe.
         - Obtiene el balance inicial de la cuenta.
         - Carga la lista de los mercados del exchange y filtra los validos.
@@ -416,7 +333,6 @@ class TrendTaker(Basics):
         return: True si logra preparar la ejecucion. False si ocurre error y se debe abortar.
         '''
         Report.prepare_directory(DIRECTORY_LOGS)
-        Report.prepare_directory(DIRECTORY_LEDGER)
         Report.prepare_directory(DIRECTORY_GRAPHICS)
         
         if self.create_handler_of_logging():
@@ -424,8 +340,7 @@ class TrendTaker(Basics):
             self.core = TrendTakerCore(self.botId, self.exchangeId, self.apiKey, self.secret)
             self.log.info(self.cmd(f'exchangeId: {self.exchangeId}'))
             
-            if self.core.exchangeInterface.check_exchange_methods(True):
-                self.ledger = Ledger(self.botId, DIRECTORY_LEDGER)            
+            if self.core.exchangeInterface.check_exchange_methods(True):           
                 if self.config.load():
                     time.sleep(1)
                     if self.get_current_balance():
@@ -433,8 +348,7 @@ class TrendTaker(Basics):
                         if self.core.load_markets():
                             if self.get_list_of_valid_markets():
                                 self.initialExecutionDateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
-                                self.currentInvestmentsFileName = f'./{self.botId}_current_investment.json'
-                                if self.load_current_investments():
+                                if self.core.investments.load_from_file():
                                     pass
                                     #self.actualize_current_investments()
                                 return True
@@ -486,9 +400,9 @@ class TrendTaker(Basics):
         '''
         if self.config.data.get("forceCloseInvestmentAndExit", False):
             self.log.error(self.cmd('ATENCION: La configuracion del bot indica que deben cerrarse todas las inversiones inmediatamente.', '\n'))
-            if len(self.currentInvestments) > 0:
-                for symbolId in self.currentInvestments.keys():
-                    self.close_investment(symbolId)
+            if not self.core.investments.empty():
+                for marketId in self.core.investments.markets():
+                    self.close_investment(marketId)
             self.log.error(self.cmd('Terminado: Se ha finalizado la ejecucion.'))
             return True
         return False
@@ -517,11 +431,12 @@ class TrendTaker(Basics):
         if orderedMarkets is None: 
             return False
         for marketData in orderedMarkets:
-            if len(self.currentInvestments.keys()) < int(self.config.data["maxCurrenciesToInvest"]):
+            if self.core.investments.count() < int(self.config.data["maxCurrenciesToInvest"]):
                 symbolId = marketData["symbolId"]
                 percentage = float(marketData['tickerData']['percentage'])
-                msg1 = f"Mercado potencial en: {symbolId}  crecimiento en 24h: {round(percentage, 2)} %"
-                self.log.info(self.cmd(msg1))                                
+                preselected = self.core.is_preselected(self.quote_of_symbol(symbolId), self.config.data)
+                msg1 = f"{symbolId}  crecimiento en 24h: {round(percentage, 2)} %"
+                self.log.info(self.cmd(msg1, "Mercado preseleccionado: " if preselected else "Mercado potencial: "))                                
                 lastPrice = float(marketData["tickerData"]["last"])
                 amountToInvestAsQuote = float(self.config.data["amountToInvestAsQuote"])
                 amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
@@ -530,7 +445,7 @@ class TrendTaker(Basics):
                     graphTitle = f'{self.botId} {self.exchangeId} {symbolId}'
                     report.create_graph(marketData["candles1h"], graphTitle, graphFileName, marketData["metrics"], False)           
                     marketData["openInvest"] = False         
-                    if symbolId not in self.currentInvestments:
+                    if not self.core.investments.contains(symbolId):
                         if self.core.sufficient_quote_to_buy(amountToInvestAsQuote, symbolId):
                             if self.config.data["modeActive"]["enable"]:
                                 if self.invest_in(
@@ -548,15 +463,15 @@ class TrendTaker(Basics):
                     report.append_market_data(graphFileName, marketData)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
-        if len(self.currentInvestments) == 0:
+        if self.core.investments.empty():
             self.log.info(self.cmd('SIN INVERTIR: No se han encontrado mercados favorables.'))
         self.log.info(self.cmd('Terminado'))
         return True
 
 
 if __name__ == "__main__":
-    #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').read())
-    credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
+    credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_hitbtc.json').read())
+    #credentials = json.loads(open('D:/1-Lineas/2 - Cryptos/automatic 2024/credential_bingx.json').read())
     bot = TrendTaker('TrendTaker1', credentials['exchange'], credentials['key'], credentials['secret'])
     bot.execute()    
  

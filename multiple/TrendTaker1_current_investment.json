@@ -1,0 +1,266 @@
+{
+    "initialDateTimeUTC": "2024-04-23T23:07:20.113Z",
+    "initialBalanceQuote": 0.0,
+    "finalBalanceQuote": 32.0682021608,
+    "totalFeeAsQuote": 0.04,
+    "totalProfitAsQuote": 0.0,
+    "totalExposureHours": 0.0,
+    "minProfitAsPercent": null,
+    "minProfitAsQuote": null,
+    "maxProfitAsPercent": null,
+    "maxProfitAsQuote": null,
+    "investments": {
+        "BTC/USDT": {
+            "symbol": "BTC/USDT",
+            "amountAsBase": 0.0003010199005761371,
+            "lastTickerPrice": 66440.79,
+            "buy": {
+                "id": "1713911672879",
+                "price": 66440.79,
+                "amountAsBase": 0.0003010199005761371,
+                "fee": 0.04,
+                "timestamp": 1713911672879,
+                "datetimeUTC": "2024-04-23T22:34:32.879Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "ETH/USDT": {
+            "symbol": "ETH/USDT",
+            "amountAsBase": 0.006214708225663513,
+            "lastTickerPrice": 3218.172,
+            "buy": {
+                "id": "1713911674782",
+                "price": 3218.172,
+                "amountAsBase": 0.006214708225663513,
+                "fee": 0.04,
+                "timestamp": 1713911674782,
+                "datetimeUTC": "2024-04-23T22:34:34.782Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "HBAR/USDT": {
+            "symbol": "HBAR/USDT",
+            "amountAsBase": 145.7099352319338,
+            "lastTickerPrice": 0.137714,
+            "buy": {
+                "id": "1713911676784",
+                "price": 0.137714,
+                "amountAsBase": 145.7099352319338,
+                "fee": 0.040132596041061064,
+                "timestamp": 1713911676784,
+                "datetimeUTC": "2024-04-23T22:34:36.784Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "CSOV/USDT": {
+            "symbol": "CSOV/USDT",
+            "amountAsBase": 2675.263179015236,
+            "lastTickerPrice": 0.0074759,
+            "buy": {
+                "id": "1713911675000",
+                "price": 0.0074759,
+                "amountAsBase": 2675.263179015236,
+                "fee": 0.04,
+                "timestamp": 1713911675000,
+                "datetimeUTC": "2024-04-23T22:34:35.000Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "ANKR/USDT": {
+            "symbol": "ANKR/USDT",
+            "amountAsBase": 368.4014691850591,
+            "lastTickerPrice": 0.0542886,
+            "buy": {
+                "id": "1713911681189",
+                "price": 0.0542886,
+                "amountAsBase": 368.4014691850591,
+                "fee": 0.04,
+                "timestamp": 1713911681189,
+                "datetimeUTC": "2024-04-23T22:34:41.189Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "KLAY/USDT": {
+            "symbol": "KLAY/USDT",
+            "amountAsBase": 94.18412997409936,
+            "lastTickerPrice": 0.21235,
+            "buy": {
+                "id": "1713911683490",
+                "price": 0.21235,
+                "amountAsBase": 94.18412997409936,
+                "fee": 0.04,
+                "timestamp": 1713911683490,
+                "datetimeUTC": "2024-04-23T22:34:43.490Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "XEM/USDT": {
+            "symbol": "XEM/USDT",
+            "amountAsBase": 478.5707961743051,
+            "lastTickerPrice": 0.0417911,
+            "buy": {
+                "id": "1713911685593",
+                "price": 0.0417911,
+                "amountAsBase": 478.5707961743051,
+                "fee": 0.04,
+                "timestamp": 1713911685593,
+                "datetimeUTC": "2024-04-23T22:34:45.593Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "THETA/USDT": {
+            "symbol": "THETA/USDT",
+            "amountAsBase": 8.318720114997987,
+            "lastTickerPrice": 2.404216,
+            "buy": {
+                "id": "1713911687695",
+                "price": 2.404216,
+                "amountAsBase": 8.318720114997987,
+                "fee": 0.04,
+                "timestamp": 1713911687695,
+                "datetimeUTC": "2024-04-23T22:34:47.695Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "TLM/USDT": {
+            "symbol": "TLM/USDT",
+            "amountAsBase": 1114.951499609767,
+            "lastTickerPrice": 0.017919,
+            "buy": {
+                "id": "1713911687195",
+                "price": 0.017919,
+                "amountAsBase": 1114.951499609767,
+                "fee": 0.03995763184301484,
+                "timestamp": 1713911687195,
+                "datetimeUTC": "2024-04-23T22:34:47.195Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "BAT/USDT": {
+            "symbol": "BAT/USDT",
+            "amountAsBase": 73.27537251367502,
+            "lastTickerPrice": 0.272943,
+            "buy": {
+                "id": "1713911691298",
+                "price": 0.272943,
+                "amountAsBase": 73.27537251367502,
+                "fee": 0.04,
+                "timestamp": 1713911691298,
+                "datetimeUTC": "2024-04-23T22:34:51.298Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "REN/USDT": {
+            "symbol": "REN/USDT",
+            "amountAsBase": 294.21456479781574,
+            "lastTickerPrice": 0.0679776,
+            "buy": {
+                "id": "1713911697805",
+                "price": 0.0679776,
+                "amountAsBase": 294.21456479781574,
+                "fee": 0.04,
+                "timestamp": 1713911697805,
+                "datetimeUTC": "2024-04-23T22:34:57.805Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "STRM/USDT": {
+            "symbol": "STRM/USDT",
+            "amountAsBase": 5917.159763313609,
+            "lastTickerPrice": 0.00338,
+            "buy": {
+                "id": "1713913696001",
+                "price": 0.00338,
+                "amountAsBase": 5917.159763313609,
+                "fee": 0.04,
+                "timestamp": 1713913696001,
+                "datetimeUTC": "2024-04-23T23:08:16.001Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        }
+    }
+}

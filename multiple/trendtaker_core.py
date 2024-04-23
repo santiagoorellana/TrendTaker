@@ -5,6 +5,8 @@ from market_metrics import *
 from basics import *
 from typing import Dict, Literal, Optional, List
 from validations import Validations
+from investments import Investments
+from configuration import *
 
 class TrendTakerCore(Validations, Basics):
 
@@ -16,6 +18,9 @@ class TrendTakerCore(Validations, Basics):
         self.validMarkets = None
         self.orderableMarket = None
         self.outQuotes = None     
+        timestamp = self.exchangeInterface.exchange.milliseconds()
+        datetimeUTC = self.exchangeInterface.exchange.iso8601(timestamp)
+        self.investments = Investments(botId, DIRECTORY_LEDGER, datetimeUTC)
 
 
     def load_markets(self) -> bool:
@@ -112,7 +117,7 @@ class TrendTakerCore(Validations, Basics):
                     for ticker in result:
                         baseId = self.base_of_symbol(ticker["symbol"]) 
                         preselectedLabel = '[PRESELECTED]' if self.is_preselected(baseId, configuration) else ''
-                        self.cmd(f'{ticker["percentage"]} %   {ticker["symbol"]}   {preselectedLabel}')
+                        self.cmd(f'{round(float(ticker["percentage"]), 2)} %   {ticker["symbol"]}   {preselectedLabel}')
                         time.sleep(0.1)
                     self.cmd('\n')
                 return result
@@ -197,6 +202,7 @@ class TrendTakerCore(Validations, Basics):
         ticker = self.exchangeInterface.get_ticker(symbol)
         if ticker is not None:
             price = float(ticker["last"])
+            amountAsQuote = amount * price
             return {
                 'id': str(ticker["timestamp"]),     # string
                 'clientOrderId': 'simulated',       # a user-defined clientOrderId, if any
@@ -213,12 +219,12 @@ class TrendTakerCore(Validations, Basics):
                 'amount': amount,                   # ordered amount of base currency
                 'filled': amount,                   # filled amount of base currency
                 'remaining': 0,                     # remaining amount to fill
-                'cost': float(amount)*price,        # 'filled' * 'price' (filling price used where available)
+                'cost': float(amountAsQuote),       # 'filled' * 'price' (filling price used where available)
                 'trades': [],                       # a list of order trades/executions
-                'fee': {                            # fee info, if available
-                    'currency': quote,              # which currency the fee is (usually quote)
-                    'cost': float(amount) * 0.002,  # the fee amount in that currency
-                    'rate': 0.002                   # the fee rate (if available)
+                'fee': {                                    # fee info, if available
+                    'currency': quote,                      # which currency the fee is (usually quote)
+                    'cost': float(amountAsQuote) * 0.002,   # the fee amount in that currency
+                    'rate': 0.002                           # the fee rate (if available)
                 }       
             }
         else:

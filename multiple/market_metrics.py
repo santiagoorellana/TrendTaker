@@ -6,7 +6,9 @@ from exchange_interface import CANDLE_LOW, CANDLE_HIGT, CANDLE_CLOSE
 Metrics = Dict
 MetricsSummary = Dict
 
-class MarketMetrics():
+MIN_PROFIT_PERCENT = 1
+
+class MarketMetrics(Basics):
     
     ####################################################################################################
     # METODO PRICIPAL DE LA CLASE 
@@ -28,8 +30,8 @@ class MarketMetrics():
         return: Devuelve un objeto con las metricas del mercado.
         '''    
         metrics: Metrics = {"completed": False}
-        metrics["base"] = Basics.base_of_symbol(ticker["symbol"])
-        metrics["quote"] = Basics.quote_of_symbol(ticker["symbol"])
+        metrics["base"] = MarketMetrics.base_of_symbol(ticker["symbol"])
+        metrics["quote"] = MarketMetrics.quote_of_symbol(ticker["symbol"])
         metrics["ticker"] = MarketMetrics._ticker_statistics(ticker)
         metrics["candles"] = MarketMetrics._candles_statistics(candles1h)
         metrics["trading"] = MarketMetrics._trading_parameters(metrics)
@@ -42,20 +44,6 @@ class MarketMetrics():
     # METODOS DE USO GENERAL 
     ####################################################################################################
     
-    @staticmethod
-    def _delta(fromValue: float, toValue: float) -> float:
-        '''
-        Calcula la variación en porciento entre dos valores.
-        Se puede utilizar para calcular el rendimiento de un activo o currecy.
-        Para calcular el porciento, se toma como total el valor inicial "fromValue".
-        param fromValue: Valor inicial.
-        param toValue: Valor final.
-        return: Variación en porciento entre los valores "fromValue" y "toValue".
-                Si ocurre error no se maneja la excepcion.
-        '''
-        return (toValue - fromValue) / fromValue * 100
-        
-
     @staticmethod
     def _linear_interpolation(X: int, X0: int, Y0: float, X1: int, Y1: float) -> float:
         '''
@@ -114,7 +102,7 @@ class MarketMetrics():
                 Si ocurre error, devuelve un delta muy grande, inaceptable.
         '''
         try:
-            return MarketMetrics._delta(tickerData['bid'], tickerData['ask'])
+            return MarketMetrics.delta(tickerData['bid'], tickerData['ask'])
         except:
             return 1000000
     
@@ -133,7 +121,7 @@ class MarketMetrics():
                 Si ocurre un error, devuelve cero.
         '''
         try:
-            delta = MarketMetrics._delta(tickerData['low'], tickerData['high'])
+            delta = MarketMetrics.delta(tickerData['low'], tickerData['high'])
             return (tickerData['percentage'] / delta * 100)
         except Exception as e:
             return 0
@@ -170,7 +158,7 @@ class MarketMetrics():
         '''
         try:
             candleValues = candle[1:5]
-            deltaPercent =  MarketMetrics._delta(min(candleValues), max(candleValues))
+            deltaPercent =  MarketMetrics.delta(min(candleValues), max(candleValues))
             result = deltaPercent < 0.1 if deltaPercent is not None else True
             return result
         except Exception as e:
@@ -285,10 +273,10 @@ class MarketMetrics():
                 "percent": {
                     "colapses": colapses,
                     "completion": completion,
-                    "deviation": MarketMetrics._delta(average, deviation),
-                    "changeWhole": MarketMetrics._delta(prices[0], prices[-1]),
-                    "changeHalf1": MarketMetrics._delta(prices[0], prices[middle]),
-                    "changeHalf2": MarketMetrics._delta(prices[middle], prices[-1])
+                    "deviation": MarketMetrics.delta(average, deviation),
+                    "changeWhole": MarketMetrics.delta(prices[0], prices[-1]),
+                    "changeHalf1": MarketMetrics.delta(prices[0], prices[middle]),
+                    "changeHalf2": MarketMetrics.delta(prices[middle], prices[-1])
                 },
                 "trendDeviation": trendDeviation
             }
@@ -305,7 +293,8 @@ class MarketMetrics():
         param metrics: Objeto con datos estadisticos sobre el mercado especifico.
         return: Devuelve un objeto con datos de trading para invertir en el mercado.
         '''
-        profitPercent = float(metrics["ticker"]["percentage"])
+        profitPercent = abs(float(metrics["ticker"]["percentage"]))
+        profitPercent = max(profitPercent, MIN_PROFIT_PERCENT)
         maxLossPercent = float(metrics["candles"]["trendDeviation"]["percent"]["lowerMin"])
         lastPrice = float(metrics["ticker"]["lastPrice"])
         return {
@@ -340,7 +329,7 @@ class MarketMetrics():
             lowerDeviation = list(filter(lambda deviation: deviation < 0, deviations))
             absolute = list(abs(deviation) for deviation in deviations)
             # Valores de desviacion expresados en porciento con respecto a la linea de tendencia.
-            deviationsAsPercent = list(float(MarketMetrics._delta(float(trendLine[index]), candles[index][CANDLE_CLOSE])) for index in range(len(candles)))
+            deviationsAsPercent = list(float(MarketMetrics.delta(float(trendLine[index]), candles[index][CANDLE_CLOSE])) for index in range(len(candles)))
             upperDeviationAsPercent = list(filter(lambda deviation: deviation > 0, deviationsAsPercent))
             lowerDeviationAsPercent = list(filter(lambda deviation: deviation < 0, deviationsAsPercent))
             absoluteAsPercent = list(abs(deviation) for deviation in deviationsAsPercent)

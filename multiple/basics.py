@@ -4,6 +4,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import regex # type: ignore
 from typing import List, Any, Dict, Union, Literal, Optional
+import os
 
 INDENT = str("   ")
 
@@ -36,7 +37,6 @@ AmountLimit = Literal["min", "max"]
 # Definiciones de datos propios del TrendTaker
 
 ListOfTickers = List[Ticker]
-CurrentInvestments = Dict
 ConfigurationData = Dict
 Filters = Dict
 MarketData = Dict
@@ -60,6 +60,7 @@ class Basics():
         '''
         print(f"{prefix}{message}{suffix}")
         return message
+
 
 
     @staticmethod 
@@ -87,6 +88,7 @@ class Basics():
         return log
 
 
+
     @staticmethod
     def decimal_string(value:float) -> str:
         '''
@@ -109,6 +111,7 @@ class Basics():
                 result += char
                 completed = True
         return str(result[::-1])
+
 
 
     @staticmethod
@@ -142,6 +145,7 @@ class Basics():
             return False               
 
 
+
     @staticmethod
     def base_of_symbol(symbol:MarketId) -> CurrencyId:
         '''
@@ -152,6 +156,7 @@ class Basics():
             return str(symbol).split('/')[0]
         except Exception as e:
             return ""
+
             
 
     @staticmethod
@@ -165,3 +170,39 @@ class Basics():
         except Exception as e:
             return ""
         
+
+
+
+    @staticmethod
+    def delta(fromValue: float, toValue: float) -> float:
+        '''
+        Calcula la variación en porciento entre dos valores.
+        Se puede utilizar para calcular el rendimiento de un activo o currecy.
+        Para calcular el porciento, se toma como total el valor inicial "fromValue".
+        param fromValue: Valor inicial.
+        param toValue: Valor final.
+        return: Variación en porciento entre los valores "fromValue" y "toValue".
+                Si ocurre error no se maneja la excepcion.
+        '''
+        return (toValue - fromValue) / fromValue * 100
+        
+
+
+
+    @staticmethod
+    def prepare_directory(directoryPath:str) -> bool:
+        '''
+        Crea el directorio especificado si este no existe.
+        param directoryPath: Nombre del directorio icluyedo la ruta completa. Ej: "./graphics/"
+        '''
+        try:
+            os.stat(directoryPath)
+        except:
+            try:
+                os.mkdir(directoryPath)   
+            except Exception as e:
+                print(f'Error: Creando el directorio: {directoryPath}')
+                return False
+        return True
+
+

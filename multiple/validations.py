@@ -10,27 +10,6 @@ class Validations(Basics):
     
     def __init__(self, botId:str):
         self.log = logging.getLogger(botId)
-
-    
-    def is_valid_current_investment_structure(self, data) -> bool:
-        '''
-        Verifica que la estructura de los datos de la inversion actual sea correcta.
-        Se comprueba que existan todos los parametros.\n
-        param data: Datos a los que se les debe verificar y comprobar la estructura.
-        return: True si los datos son correctos. De lo contrario devuelve False.
-        '''
-        try:
-            if data.get("symbol", None) is None: return False
-            if data.get("initialPrice", None) is None: return False
-            if data.get("amountAsBase", None) is None: return False
-            if data.get("initialDateTimeAsSeconds", None) is None: return False
-            if data.get("fee", None) is None: return False
-            if data.get("ticker", None) is None: return False
-            if data.get("balance", None) is None: return False
-            return True
-        except Exception as e:
-            self.log.exception(Validations.cmd(f'Error en los datos de la inversion actual. Exception: {str(e)}'))
-            return False
         
     
     @staticmethod
@@ -142,29 +121,32 @@ class Validations(Basics):
         return: True si el ticker es un mercado valido que cumple las con el filtro o si es preseleccionado. 
         De lo contrario False.
         '''
-        preselected = configuration.get("preselected", [])
-        base = str(Basics.base_of_symbol(tickerData["symbol"]))
-        if base.upper() in preselected or base.lower() in preselected:
+        try:
+            preselected = configuration.get("preselected", [])
+            base = str(Basics.base_of_symbol(tickerData["symbol"]))
+            if base.upper() in preselected or base.lower() in preselected:
+                return True
+            if tickerData is None:
+                return False
+            filters = configuration["filters"]["tickers"]
+            
+            valueLimit = float(filters.get("minProfit", None))
+            if valueLimit is not None:
+                if float(tickerData.get('percentage', 0)) < valueLimit:
+                    return False
+
+            valueLimit = float(filters.get("maxSpreadOverProfit", None))
+            if valueLimit is not None:
+                if float(MarketMetrics.ticker_spread(tickerData)) > valueLimit:
+                    return False
+
+            valueLimit = float(filters.get("minProfitOverAmplitude", None))
+            if valueLimit is not None:
+                if float(MarketMetrics.ticker_profit_over_amplitude(tickerData)) < valueLimit:
+                    return False
             return True
-        if tickerData is None:
+        except Exception as e:
             return False
-        filters = configuration["filters"]["tickers"]
-        
-        valueLimit = float(filters.get("minProfit", None))
-        if valueLimit is not None:
-            if float(tickerData.get('percentage', 0)) < valueLimit:
-                return False
-
-        valueLimit = float(filters.get("maxSpreadOverProfit", None))
-        if valueLimit is not None:
-            if float(MarketMetrics.ticker_spread(tickerData)) > valueLimit:
-                return False
-
-        valueLimit = float(filters.get("minProfitOverAmplitude", None))
-        if valueLimit is not None:
-            if float(MarketMetrics.ticker_profit_over_amplitude(tickerData)) < valueLimit:
-                return False
-        return True
 
 
     @staticmethod

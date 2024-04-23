@@ -3,6 +3,11 @@ from file_manager import *
 from basics import *
 import logging
 
+DIRECTORY_LOGS = "./logs/"
+DIRECTORY_LEDGER = "./ledger/"
+DIRECTORY_GRAPHICS = "./graphics/"
+
+
 DEFAULT_CONFIGURATION = {
     "debugMode": False,
     "forceCloseInvestmentAndExit": False,

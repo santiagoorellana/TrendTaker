@@ -34,24 +34,10 @@ class Report(Basics):
         self.uniqueDateTimeLabel = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.subdirectory = f"{self.directory}marquets_{self.uniqueDateTimeLabel}/"
         self.prepare_directory(self.subdirectory)
+
+
+
         
-    @staticmethod
-    def prepare_directory(directoryPath:str) -> bool:
-        '''
-        Crea el directorio especificado si este no existe.
-        param directoryPath: Nombre del directorio icluyedo la ruta completa. Ej: "./graphics/"
-        '''
-        try:
-            os.stat(directoryPath)
-        except:
-            try:
-                os.mkdir(directoryPath)   
-            except Exception as e:
-                Report.cmd(f'Error: Creando el directorio: {directoryPath}')
-                return False
-        return True
-
-
     def create_unique_filename(self) -> str:
         '''
         Crea un nombre de fichero unico utilizando la fecha-hora actual y la extension.
@@ -59,6 +45,8 @@ class Report(Basics):
         '''
         dateTimeLabel = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         return f'{self.botId}_{self.exchangeId}__{dateTimeLabel}.{self.extension}' 
+
+
     
 
     def append_market_data(self, imageFileName:str, data:MarketData) -> bool:
@@ -78,10 +66,14 @@ class Report(Basics):
             msg1 = f'Error: Agregando datos para la web.'
             self.log.exception(f'{self.cmd(msg1)} Exception: {str(e)}Image: {imageFileName}  Data: {str(data)}')
             return False
+
         
+   
         
     def count_market_data(self) -> int:
         return len(self.dataMarket1)
+
+
     
     
     def create_web(self, openInBrowser:bool=False) -> bool:
@@ -133,6 +125,8 @@ class Report(Basics):
             msg1 = f'Error creando el fichero: "{self.fileName}".'
             self.log.exception(f"{self.cmd(msg1)} Exception: {str(e)}")
         return False
+
+
         
 
     def open_web(self) -> bool:
@@ -147,6 +141,8 @@ class Report(Basics):
             self.log.exception(f'{self.cmd(msg1)} Exception: {str(e)}  File: {self.fileName}')
             return False
         
+
+    
     
     def create_graph(self, candles: ListOfCandles, title:str, fileName:str, metrics:Optional[Dict]=None, show:bool=False):
         '''
@@ -235,6 +231,8 @@ class Report(Basics):
         except:
             self.log.exception(self.cmd(f'Error: No se pudo crear el grafico: {title}'))
             return False
+
+
 
 
     def summary(self, marketData:MarketData, quoteDecimals:int=10) -> MetricsSummary:
