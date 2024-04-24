@@ -18,9 +18,7 @@ class TrendTakerCore(Validations, Basics):
         self.validMarkets = None
         self.orderableMarket = None
         self.outQuotes = None     
-        timestamp = self.exchangeInterface.exchange.milliseconds()
-        datetimeUTC = self.exchangeInterface.exchange.iso8601(timestamp)
-        self.investments = Investments(botId, DIRECTORY_LEDGER, datetimeUTC)
+        self.investments = Investments(botId, DIRECTORY_LEDGER)
 
 
     def load_markets(self) -> bool:
