@@ -3,7 +3,6 @@
     "forceCloseInvestmentAndExit": false,
     "currencyQuote": "USDT",
     "amountToInvestAsQuote": 20,
-    "amountIsPercentOfBalance": false,
     "blackList": [
         "DEMONIO",
         "KILLER"

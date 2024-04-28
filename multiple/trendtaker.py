@@ -7,6 +7,7 @@ from exchange_interface import *
 from configuration import *
 from file_manager import *
 from basics import *
+from balances import Balances
 
 
 DEBUG_MODE = {
@@ -26,8 +27,9 @@ class TrendTaker(Basics):
         
         self.listOfValidMarketsId:Optional[ListOfMarketsId] = None
         self.config = Configuration(botId)
-        self.initialBalance:Balance = {}
-        self.currentBalance:Optional[Balance] = None
+        self.balance = Balances(botId)
+
+
         
     
     def create_handler_of_logging(self) -> bool:
@@ -51,41 +53,13 @@ class TrendTaker(Basics):
 
 
 
+
+
     ####################################################################################################
     # METODOS PARA PEDIR DATOS AL EXCHANGE
     ####################################################################################################
     
     
-    def get_current_balance(self) -> bool:
-        '''
-        Obtiene el balance actual de la cuenta y lo guarda en la propiedad "currentBalance" del la clase.
-        Puede mostrar mensajes por pantalla y registrar en el log, segun la configuracion.\n
-        return: True si logra obtener el balance. False si ocurre error o no lo obtiene.
-        '''
-        self.currentBalance = self.core.exchangeInterface.get_balance()
-        if self.currentBalance is None:
-            msg1 = 'Error: No se pudo obtener el balance actual de la cuenta.'
-            self.log.error(self.cmd(msg1))
-            return False
-        else:
-            if self.initialBalance == {}:
-                self.initialBalance = self.currentBalance
-            quote = self.config.data['currencyQuote']
-            quoteBalance = float(self.currentBalance['free'][quote])
-            msg1 = 'El balance libre actual de la cuenta es:'
-            self.log.info(f"{msg1} {str(self.currentBalance)}")
-            TrendTakerCore.show_object(self.currentBalance['free'], f"\n{msg1}") 
-            self.log.info(self.cmd(f'El balance libre actual de {quote} es: {round(quoteBalance, 10)}', "\n"))
-            if not self.config.data.get("amountIsPercentOfBalance", True):
-                param = "amountToInvestAsQuote"
-                if quoteBalance < float(self.config.data.get(param, 10)) * 2.5 and not DEBUG_MODE["ignoreBalance"]:
-                    self.log.error(self.cmd(f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'))
-                    self.log.info(self.cmd(f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'))
-                    return False
-            return True
-
-
-                
     def get_list_of_valid_markets(self) -> bool:
         '''
         Obtiene la lista de los mercados validos y la guarda en la propiedad "listOfValidMarketsId" de la clase.
@@ -111,6 +85,7 @@ class TrendTaker(Basics):
                 self.log.error(self.cmd('Se necesita al menos un mercado valido y operable.'))
                 return False
             return True
+
 
 
 
@@ -149,13 +124,8 @@ class TrendTaker(Basics):
             if ticker is not None:
                 base = self.base_of_symbol(symbolId)
                 quote = self.quote_of_symbol(symbolId)
-                self.currentBalance = self.core.exchangeInterface.get_balance()
-                if self.currentBalance is None:
-                    self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
-                    balanceQuote = float(0)
-                else:
-                    balanceQuote = float(self.currentBalance["free"][quote])
-                
+                self.balance.actualize(self.core.exchangeInterface.get_balance())
+                balanceQuote = self.balance.get(quote)                
                 lastPrice = float(ticker.get("last", 0))
                 if lastPrice > 0:
                     if self.core.check_market_limits(market, amountAsBase, lastPrice):
@@ -200,6 +170,8 @@ class TrendTaker(Basics):
         return False
 
 
+
+
     
     def close_investment(self, symbolId:MarketId) -> bool:
         '''
@@ -221,28 +193,23 @@ class TrendTaker(Basics):
                 if ticker is not None:
                     base = self.base_of_symbol(symbolId)
                     quote = self.quote_of_symbol(symbolId)
-                    amountAsBase = float(investment['amountAsBase'])
+                    amountAsBase = float(investment['buy']['amountAsBase'])
                     lastPrice = float(ticker.get("last", 0))
                     if lastPrice > 0:
-                        initialPrice = float(investment['initialPrice'])
-
+                        initialPrice = float(investment['buy']['price'])
                         order = self.core.execute_market('sell', symbolId, amountAsBase, bool(DEBUG_MODE.get("simulateOrders", False)))
                         if order is not None:                        
-                            self.currentBalance = self.core.exchangeInterface.get_balance()
-                            if self.currentBalance is None:
-                                self.log.error(self.cmd('Error: No se pudo obtener el balance actual de la cuenta.'))
-                                balanceQuote = float(0)
-                            else:
-                                balanceQuote = float(self.currentBalance["free"][quote])                            
+                            self.balance.actualize(self.core.exchangeInterface.get_balance())
+                            balanceQuote = self.balance.get(quote)
                             invest = self.core.investments.close(symbolId, order, balanceQuote)                            
                             msg1 = f'INVERSION CERRADA en {symbolId}'
                             msg2 = f'cantidad vendida: {order["filled"]} {base}'
                             msg3 = f'valor aproximado: {float(order["filled"]) * float(order["average"])} {quote}'
                             msg4 = f'precio de compra: {initialPrice} {quote}'
                             msg5 = f'precio de venta: {order["average"]} {quote}'
-                            msg6 = f'profit de inversion: {invest["result"][""]}% en {round(invest["result"][""], 2)} horas'
-                            msg7 = f'profit total: {round(invest["result"]["profitAsPercent"], 2)}% en {round(invest[""], 2)} horas'
-                            msg8 = f'profit total: {round(invest["result"]["profitAsPercent"], 2)}% en {round(invest[""], 2)} horas'
+                            msg6 = f'duracion: {round(invest["result"]["hours"], 2)} horas'
+                            msg7 = f'ganancia: {round(invest["result"]["profitAsPercent"], 2)}%'
+                            msg8 = f'valor de ganancia: {invest["result"]["profitAsQuote"]} {quote}'
                             self.log.info(f'{msg1} {msg2} {msg3} {msg4} {msg5} {msg6} {msg7} {msg8}')
                             self.cmd(f'\n{msg1}\n   {msg2}\n   {msg3}\n   {msg4}\n   {msg5}\n   {msg6}\n   {msg7}\n   {msg8}\n')
                             return True
@@ -257,6 +224,8 @@ class TrendTaker(Basics):
             return False
         else:
             return True
+
+
         
 
 
@@ -270,47 +239,61 @@ class TrendTaker(Basics):
         return: True si logra actualizar el estado de las inversiones. False si ocurre un error.
         '''
         if not self.core.investments.empty():
+            index = 0
             for marketId in self.core.investments.markets():
+                index += 1
                 investment = self.core.investments.get(marketId)
                 openInvesting = True
                 ticker = self.core.exchangeInterface.get_ticker(marketId)
                 if ticker is not None and investment is not None:
                     actualPrice = float(ticker["last"])
+
+                    #symbolId = investment["symbol"]
+                    base = self.base_of_symbol(investment["symbol"])
+                    quote = self.quote_of_symbol(investment["symbol"])                                
+                    msg1 = f'{index}: Inversion en {investment["symbol"]}'
+                    msg2 = f'cantidad comprada: {investment["buy"]["amountAsBase"]} {base}'
+                    msg3 = f'precio de compra: {investment["buy"]["price"]} {quote}'
+                    self.log.info(f'{msg1} {msg2} {msg3}')
+                    self.cmd(f'\n{msg1}\n{INDENT}{msg2}\n{INDENT}{msg3}')
                     
                     if openInvesting:
-                        if investment["trailingStop"]:
+                        if investment["forExit"]["trailingStop"]:
                             if investment["maxLossPercent"] is not None:
-                                trailingStopPrice = actualPrice * (1 + (float(investment["maxLossPercent"]) / 100))
+                                trailingStopPrice = actualPrice * (1 + (float(investment["forExit"]["maxLossPercent"]) / 100))
                                 if actualPrice <= float(trailingStopPrice):
-                                    self.log.info(self.cmd(f'TRAILING STOP LOSS activado en {marketId}', '\n'))
+                                    self.log.info(self.cmd(f'TRAILING STOP LOSS activado en {marketId}'))
                                     openInvesting = not self.close_investment(marketId)
                         else:
-                            if investment["stopLossPrice"] is not None:
-                                if actualPrice <= float(investment["stopLossPrice"]):
-                                    self.log.info(self.cmd(f'STOP LOSS activado en {marketId}', '\n'))
+                            if investment["forExit"]["stopLossPrice"] is not None:
+                                if actualPrice <= float(investment["forExit"]["stopLossPrice"]):
+                                    self.log.info(self.cmd(f'STOP LOSS activado en {marketId}'))
                                     openInvesting = not self.close_investment(marketId)
                                     
-                    if openInvesting and investment["takeProfitPrice"] is not None:
+                    if openInvesting and investment["forExit"]["takeProfitPrice"] is not None:
                         if actualPrice >= float(investment["takeProfitPrice"]):
-                            self.log.info(self.cmd(f'TAKE PROFIT activado en {marketId}', '\n'))
+                            self.log.info(self.cmd(f'TAKE PROFIT activado en {marketId}'))
                             openInvesting = not self.close_investment(marketId)
                             
                     if openInvesting:
-                        if investment["maxHours"] is not None:
-                            maxHours = float(investment["maxHours"])
+                        if investment["forExit"]["maxHours"] is not None:
+                            maxHours = float(investment["forExit"]["maxHours"])
                         else:
                             maxHours = int(self.config.data["candlesDays"]) * 24
-                        dateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
-                        initialTimestampSeconds = int(investment["initialTimestampSeconds"])
-                        hours = float((dateTimeAsSeconds - initialTimestampSeconds) / 60 / 60)
+                        timestamp = self.core.exchangeInterface.exchange.milliseconds()
+                        initialTimestamp = int(investment["buy"]["timestamp"])
+                        hours = float((timestamp - initialTimestamp) / 1000 / 60 / 60)
+                        self.cmd(f'{INDENT}duracion: {round(hours, 2)} horas')
                         if hours >= maxHours:
-                            self.log.info(self.cmd(f'TIME STOP activado en {marketId}', '\n'))
+                            self.log.info(self.cmd(f'TIME STOP activado en {marketId}'))
                             openInvesting = not self.close_investment(marketId)
                 else:
                     self.log.warning(self.cmd(f'Error: No se pudo obtener el ticker del mercado {marketId}', '\n'))
                 time.sleep(0.2)
             return True
         return False
+
+
 
     
         
@@ -343,17 +326,36 @@ class TrendTaker(Basics):
             if self.core.exchangeInterface.check_exchange_methods(True):           
                 if self.config.load():
                     time.sleep(1)
-                    if self.get_current_balance():
+                    if self.balance.actualize(self.core.exchangeInterface.get_balance()):
+                        self.balance.show(self.config.data["currencyQuote"])
                         time.sleep(1)
-                        if self.core.load_markets():
-                            if self.get_list_of_valid_markets():
-                                self.initialExecutionDateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
-                                if self.core.investments.load_from_file():
-                                    pass
-                                    #self.actualize_current_investments()
-                                return True
+                        if self.sufficient_balance():
+                            if self.core.load_markets():
+                                if self.get_list_of_valid_markets():
+                                    self.initialExecutionDateTimeAsSeconds = self.core.exchangeInterface.exchange.seconds()
+                                    if self.core.investments.load_from_file():
+                                        self.actualize_current_investments()
+                                    return True
         self.log.info(self.cmd('Terminado: No se puede continuar.'))
         return False
+
+
+
+
+
+    def sufficient_balance(self):
+        param = "amountToInvestAsQuote"
+        quote = self.config.data["currencyQuote"]
+        balanceQuote = self.balance.get(quote)
+        amountToInvestAsQuote = float(self.config.data.get(param, 10))
+        if balanceQuote < amountToInvestAsQuote * 2.5 and not DEBUG_MODE["ignoreBalance"]:
+            self.log.error(self.cmd(f'El balance libre actual de {quote} en la cuenta no es suficiente para operar.'))
+            self.log.info(self.cmd(f'Debe reducir el valor del parametro "{param}" o aumentar el balance de la cuenta.'))
+            return False
+        return True
+
+
+
 
 
     def only_buy_and_sell(self):
@@ -375,23 +377,10 @@ class TrendTaker(Basics):
         return False
             
 
-    def only_invest(self):
-        '''
-        Hace prueba de invertir en un mercado introduciendo una orden de compra con takeProfit y stopLoss.\n
-        Si en DEBUG_MODE esta establecido el parametro el "onlyInvestIn", se ejecuta una orden de compra 
-        con los parametros de la configuracion, con su takeProfit y stopLoss.\n
-        Nota: Esto se hace para comprobar el funcionamiento de las compras y ventas.\n
-        return: True si logra ejecutar las ordenes de compra y venta correctamente. False si ocurre error.
-        '''
-        #marketId = DEBUG_MODE.get("onlyInvestIn", None)
-        #if marketId is not None:
-        #    self.invest_in(str(marketId), 1, -1, 24)
-        #    self.log.info(self.cmd('Terminado'))
-        #    return True
-        return False
-            
 
-    def force_close_investment_and_exit(self):
+
+
+    def force_close_investments_and_exit(self):
         '''
         Cierra todas las inversiones abiertas\n
         Si en la configuracion esta establecido el parametro el "forceCloseInvestmentAndExit", 
@@ -400,6 +389,7 @@ class TrendTaker(Basics):
         '''
         if self.config.data.get("forceCloseInvestmentAndExit", False):
             self.log.error(self.cmd('ATENCION: La configuracion del bot indica que deben cerrarse todas las inversiones inmediatamente.', '\n'))
+            time.sleep(3)
             if not self.core.investments.empty():
                 for marketId in self.core.investments.markets():
                     self.close_investment(marketId)
@@ -407,6 +397,9 @@ class TrendTaker(Basics):
             return True
         return False
         
+
+
+
 
     def execute(self) -> bool:
         '''
@@ -419,9 +412,7 @@ class TrendTaker(Basics):
             return False
         if self.only_buy_and_sell():
             return True
-        if self.only_invest():
-            return True
-        if self.force_close_investment_and_exit():
+        if self.force_close_investments_and_exit():
             return True
         report = Report(self.core, self.botId, self.exchangeId, DIRECTORY_GRAPHICS, "png")
         validTickers = self.core.get_ordered_and_filtered_tickers(self.listOfValidMarketsId, self.config.data)
@@ -444,8 +435,10 @@ class TrendTaker(Basics):
                     graphFileName = report.create_unique_filename()
                     graphTitle = f'{self.botId} {self.exchangeId} {symbolId}'
                     report.create_graph(marketData["candles1h"], graphTitle, graphFileName, marketData["metrics"], False)           
-                    marketData["openInvest"] = False         
-                    if not self.core.investments.contains(symbolId):
+                    marketData["status"] = "potential"         
+                    if self.core.investments.contains(symbolId):
+                        marketData["status"] = "open"                             
+                    else:
                         if self.core.sufficient_quote_to_buy(amountToInvestAsQuote, symbolId):
                             if self.config.data["modeActive"]["enable"]:
                                 if self.invest_in(
@@ -456,10 +449,10 @@ class TrendTaker(Basics):
                                         marketData["metrics"]["maxHours"],
                                         self.config.data["modeActive"]["trailingStopEnable"]
                                     ):
-                                    marketData["openInvest"] = True 
+                                    marketData["status"] = "new" 
                             else:
                                 if self.invest_in(symbolId, amountToInvestAsBase):
-                                    marketData["openInvest"] = True                               
+                                    marketData["status"] = "new"   
                     report.append_market_data(graphFileName, marketData)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
@@ -467,6 +460,8 @@ class TrendTaker(Basics):
             self.log.info(self.cmd('SIN INVERTIR: No se han encontrado mercados favorables.'))
         self.log.info(self.cmd('Terminado'))
         return True
+
+
 
 
 if __name__ == "__main__":

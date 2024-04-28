@@ -58,7 +58,7 @@ class Investments(Basics):
         '''
         dataFromFile = FileManager.data_from_file_json(self.fileName, False, self.log)
         if dataFromFile is not None:
-            msg1 = f'Se ha encontrado un fichero de datos de inversiones actuales": "{self.fileName}"'
+            msg1 = f'\nSe ha encontrado un fichero de datos de inversiones actuales": "{self.fileName}"'
             self.log.info(self.cmd(msg1))
             if type(dataFromFile) != dict:
                 self.log.error(self.cmd('Error: La estructura del fichero de datos de inversiones actuales no es correcta.'))
@@ -78,16 +78,17 @@ class Investments(Basics):
                     msg1 = f'{index}: Inversion en {investment["symbol"]}'
                     msg2 = f'cantidad comprada: {investment["buy"]["amountAsBase"]} {base}'
                     msg3 = f'precio de compra: {investment["buy"]["price"]} {quote}'
-                    self.log.info(f'{msg1} {msg2} {msg3}')
-                    self.cmd(f'\n{msg1}\n{INDENT}{msg2}\n{INDENT}{msg3}')
+                    #self.log.info(f'{msg1} {msg2} {msg3}')
+                    #self.cmd(f'\n{msg1}\n{INDENT}{msg2}\n{INDENT}{msg3}')
                     self.data["currentInvestments"][symbolId] = investment
-                    self.log.info(self.cmd(f'{INDENT}Se han cargado los datos de la iversion en {symbolId}.'))
+                    self.log.info(self.cmd(f'Se han cargado los datos de la iversion en {symbolId}.', INDENT))
                 else:
                     self.log.error(self.cmd(f'{index}: Error en los datos de la inversion en el mercado {symbolId}'))
                 time.sleep(1)
                 index += 1
             print()
             time.sleep(3)
+            return True
         return False
 
 
@@ -148,8 +149,8 @@ class Investments(Basics):
             "timestamp": order["timestamp"],
             "datetimeUTC": order["datetime"]
         }
-        amountAsQuoteBuy = float(result["buy"]["amountAsBase"]) * float(result["buy"]["amountAsBase"])
-        amountAsQuoteSell = float(result["sell"]["amountAsBase"]) * float(result["sell"]["amountAsBase"])
+        amountAsQuoteBuy = float(result["buy"]["amountAsBase"]) * float(result["buy"]["price"])
+        amountAsQuoteSell = float(result["sell"]["amountAsBase"]) * float(result["sell"]["price"])
         exposureHours = float((result["sell"]["timestamp"] - result["buy"]["timestamp"]) / 1000 / 60 / 60)
         totalHours = float((self.data["final"]["timestamp"] - self.data["initial"]["timestamp"]) / 1000 / 60 / 60)
         profitAsPercent = self.delta(amountAsQuoteBuy, amountAsQuoteSell)
@@ -184,7 +185,7 @@ class Investments(Basics):
         }
         del self.data["currentInvestments"][symbolId]
         FileManager.data_to_file_json(self.data, self.fileName, self.log)
-        self.fileLedger.write(order, balanceQuote)
+        self.fileLedger.write(order)
         self.fileInvestments.write(result)
         return result    
     

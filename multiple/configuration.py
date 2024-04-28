@@ -13,7 +13,6 @@ DEFAULT_CONFIGURATION = {
     "forceCloseInvestmentAndExit": False,
     "currencyQuote": "USDT",
     "amountToInvestAsQuote": 20,
-    "amountIsPercentOfBalance": False,
     "blackList": ["DEMONIO", "KILLER"],
     "preselected": ["BTC", "ETH"],
     "maxCurrenciesToInvest": 20,

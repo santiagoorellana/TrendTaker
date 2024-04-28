@@ -88,15 +88,16 @@ class Report(Basics):
                 file.write("<html><head><title>Markets</title></head><body>\n")
 
                 cases = [
-                    {"status":True, "title":"Inversiones abiertas"}, 
-                    {"status":False, "title":"Otros mercados con potencial"}, 
+                    {"status":"new", "title":"Nuevas inversiones abiertas"}, 
+                    {"status":"open", "title":"Inversiones que se mantienen abiertas"}, 
+                    {"status":"potential", "title":"Mercados donde no se pudo invertir"}
                 ]
                 for case in cases:
                     file.write(f'<h1>{case["title"]}</h1>\n')
                     file.write("<table>\n")
                     count = 0
                     for market in self.dataMarket1:
-                        if market["data"]["openInvest"] == case["status"]:
+                        if market["data"]["status"] == case["status"]:
                             count += 1
                             file.write("<tr>\n")
                             file.write(f"<td><img src='{market['imageFileName']}' width='800px'></img></td>\n")

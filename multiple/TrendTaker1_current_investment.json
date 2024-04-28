@@ -1,17 +1,17 @@
 {
     "initial": {
-        "datetimeUTC": "2024-04-24T19:40:12.238Z",
-        "timestamp": 1713987612238,
+        "datetimeUTC": "2024-04-28T13:47:27.327Z",
+        "timestamp": 1714312047327,
         "balanceQuote": 32.0682021608
     },
     "final": {
-        "datetimeUTC": "2024-04-24T19:40:12.238Z",
-        "timestamp": 1713987612238,
+        "datetimeUTC": "2024-04-28T13:47:36.036Z",
+        "timestamp": 1714312056036,
         "balanceQuote": 32.0682021608
     },
     "total": {
         "investmentsCount": 0,
-        "feeAsQuote": 0.039993966044970505,
+        "feeAsQuote": 0.19977011202333525,
         "profitAsQuote": 0.0,
         "hours": 0.0,
         "exposureHours": 0.0
@@ -27,15 +27,15 @@
     "currentInvestments": {
         "BTC/USDT": {
             "symbol": "BTC/USDT",
-            "amountAsBase": 0.0003105658540918138,
-            "lastTickerPrice": 64398.67,
+            "amountAsBase": 0.00031369867203509663,
+            "lastTickerPrice": 63753.17,
             "buy": {
-                "id": "1713987032679",
-                "price": 64398.67,
-                "amountAsBase": 0.0003105658540918138,
-                "fee": 0.04000005590185374,
-                "timestamp": 1713987032679,
-                "datetimeUTC": "2024-04-24T19:30:32.679Z"
+                "id": "1714312047327",
+                "price": 63753.17,
+                "amountAsBase": 0.00031369867203509663,
+                "fee": 0.03999856953405552,
+                "timestamp": 1714312047327,
+                "datetimeUTC": "2024-04-28T13:47:27.327Z"
             },
             "forExit": {
                 "profitPercent": null,
@@ -48,15 +48,15 @@
         },
         "ETH/USDT": {
             "symbol": "ETH/USDT",
-            "amountAsBase": 0.006357818670561042,
-            "lastTickerPrice": 3144.556,
+            "amountAsBase": 0.006036228841886116,
+            "lastTickerPrice": 3311.636,
             "buy": {
-                "id": "1713987034681",
-                "price": 3144.556,
-                "amountAsBase": 0.006357818670561042,
-                "fee": 0.0399850336948495,
-                "timestamp": 1713987034681,
-                "datetimeUTC": "2024-04-24T19:30:34.681Z"
+                "id": "1714312049728",
+                "price": 3311.636,
+                "amountAsBase": 0.006036228841886116,
+                "fee": 0.03997958547405674,
+                "timestamp": 1714312049728,
+                "datetimeUTC": "2024-04-28T13:47:29.728Z"
             },
             "forExit": {
                 "profitPercent": null,
@@ -67,17 +67,17 @@
                 "maxHours": 168
             }
         },
-        "ALGO/USDT": {
-            "symbol": "ALGO/USDT",
-            "amountAsBase": 92.13914854212832,
-            "lastTickerPrice": 0.217063,
+        "NEAR/USDT": {
+            "symbol": "NEAR/USDT",
+            "amountAsBase": 2.7248943899056832,
+            "lastTickerPrice": 7.328368,
             "buy": {
-                "id": "1713987036885",
-                "price": 0.217063,
-                "amountAsBase": 92.13914854212832,
-                "fee": 0.04,
-                "timestamp": 1713987036885,
-                "datetimeUTC": "2024-04-24T19:30:36.885Z"
+                "id": "1714312051731",
+                "price": 7.328368,
+                "amountAsBase": 2.7248943899056832,
+                "fee": 0.03993805770072866,
+                "timestamp": 1714312051731,
+                "datetimeUTC": "2024-04-28T13:47:31.731Z"
             },
             "forExit": {
                 "profitPercent": null,
@@ -88,17 +88,17 @@
                 "maxHours": 168
             }
         },
-        "YGG/USDT": {
-            "symbol": "YGG/USDT",
-            "amountAsBase": 19.935409273952395,
-            "lastTickerPrice": 1.00324,
+        "ANKR/USDT": {
+            "symbol": "ANKR/USDT",
+            "amountAsBase": 372.8915314468751,
+            "lastTickerPrice": 0.0534378,
             "buy": {
-                "id": "1713987038988",
-                "price": 1.00324,
-                "amountAsBase": 19.935409273952395,
-                "fee": 0.04,
-                "timestamp": 1713987038988,
-                "datetimeUTC": "2024-04-24T19:30:38.988Z"
+                "id": "1714312053734",
+                "price": 0.0534378,
+                "amountAsBase": 372.8915314468751,
+                "fee": 0.039853006158303644,
+                "timestamp": 1714312053734,
+                "datetimeUTC": "2024-04-28T13:47:33.734Z"
             },
             "forExit": {
                 "profitPercent": null,
@@ -109,17 +109,17 @@
                 "maxHours": 168
             }
         },
-        "TRX/USDT": {
-            "symbol": "TRX/USDT",
-            "amountAsBase": 175.40566946204837,
-            "lastTickerPrice": 0.1140042,
+        "UNI/USDT": {
+            "symbol": "UNI/USDT",
+            "amountAsBase": 2.48098941858013,
+            "lastTickerPrice": 8.06148,
             "buy": {
-                "id": "1713987612238",
-                "price": 0.1140042,
-                "amountAsBase": 175.40566946204837,
-                "fee": 0.039993966044970505,
-                "timestamp": 1713987612238,
-                "datetimeUTC": "2024-04-24T19:40:12.238Z"
+                "id": "1714312056036",
+                "price": 8.06148,
+                "amountAsBase": 2.48098941858013,
+                "fee": 0.04000089315619069,
+                "timestamp": 1714312056036,
+                "datetimeUTC": "2024-04-28T13:47:36.036Z"
             },
             "forExit": {
                 "profitPercent": null,

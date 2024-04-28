@@ -34,7 +34,7 @@ class FileInvestments(CsvBase):
         return: Devuelve una cadena con los valores de la inversion separados por coma.
         '''
         return self._csv_line([
-            str(data["initial"]["datetimeUTC"]), 
+            str(data["buy"]["datetimeUTC"]), 
             str(data["result"]["hours"]), 
             str(data["symbol"]), 
             str(data["result"]["profitAsPercent"]), 
