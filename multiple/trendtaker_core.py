@@ -10,7 +10,7 @@ from configuration import *
 
 class TrendTakerCore(Validations, Basics):
 
-    def __init__(self, botId:str, exchangeId:str, apiKey:str, secret:str):
+    def __init__(self, botId:str, exchangeId:str, apiKey:str, secret:str, quote:CurrencyId):
         Validations.__init__(self, botId)
         self.exchangeId = exchangeId
         self.exchangeInterface = ExchangeInterface(exchangeId, apiKey, secret, botId)
@@ -18,7 +18,7 @@ class TrendTakerCore(Validations, Basics):
         self.validMarkets = None
         self.orderableMarket = None
         self.outQuotes = None     
-        self.investments = Investments(botId, DIRECTORY_LEDGER)
+        self.investments = Investments(botId, exchangeId, DIRECTORY_LEDGER, quote)
 
 
     def load_markets(self) -> bool:
@@ -100,7 +100,7 @@ class TrendTakerCore(Validations, Basics):
                         tickerData = tickers[marketId]
                         if self.is_valid_ticker(tickerData, configuration):
                             selected.append(tickerData)
-            self.log.info(self.cmd(f'Cantidad de mercados creciendo en las ultimas 24 horas: {len(selected)}', '', '\n'))
+            self.log.info(self.cmd(f'Cantidad de mercados creciendo en las ultimas 24 horas: {len(selected)}', '\n', '\n'))
             try:
                 result = sorted(
                     selected, 

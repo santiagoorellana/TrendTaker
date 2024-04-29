@@ -10,13 +10,6 @@ from basics import *
 from balances import Balances
 
 
-DEBUG_MODE = {
-    "ignoreBalance": True,      # En True, hace que se ignore el balance insuficiente.
-    "simulateOrders": True,     # En True, hace que las ordenes de compra y venta sean simuladas.    
-    "onlyBuyAndSell": None      # Ejecuta una compra y venta e el mercado especificado. Se desactiva con None.
-}
-
-
 class TrendTaker(Basics):
     
     def __init__(self, botId:str, exchangeId:str, apiKey:str, secret:str):
@@ -26,7 +19,7 @@ class TrendTaker(Basics):
         self.secret = secret
         
         self.listOfValidMarketsId:Optional[ListOfMarketsId] = None
-        self.config = Configuration(botId)
+        self.config = Configuration(botId, exchangeId)
         self.balance = Balances(botId)
 
 
@@ -316,18 +309,17 @@ class TrendTaker(Basics):
         return: True si logra preparar la ejecucion. False si ocurre error y se debe abortar.
         '''
         Report.prepare_directory(DIRECTORY_LOGS)
-        Report.prepare_directory(DIRECTORY_GRAPHICS)
-        
+        Report.prepare_directory(DIRECTORY_GRAPHICS)        
         if self.create_handler_of_logging():
             self.log.info(self.cmd(f'Iniciando bot: {self.botId}', '\n'))
-            self.core = TrendTakerCore(self.botId, self.exchangeId, self.apiKey, self.secret)
-            self.log.info(self.cmd(f'exchangeId: {self.exchangeId}'))
-            
-            if self.core.exchangeInterface.check_exchange_methods(True):           
-                if self.config.load():
+            self.log.info(self.cmd(f'exchangeId: {self.exchangeId}'))            
+            if self.config.load():
+                currencyQuote = self.config.data["currencyQuote"]
+                self.core = TrendTakerCore(self.botId, self.exchangeId, self.apiKey, self.secret, currencyQuote)                
+                if self.core.exchangeInterface.check_exchange_methods(True):           
                     time.sleep(1)
                     if self.balance.actualize(self.core.exchangeInterface.get_balance()):
-                        self.balance.show(self.config.data["currencyQuote"])
+                        self.balance.show(currencyQuote)
                         time.sleep(1)
                         if self.sufficient_balance():
                             if self.core.load_markets():
@@ -429,10 +421,11 @@ class TrendTaker(Basics):
                 msg1 = f"{symbolId}  crecimiento en 24h: {round(percentage, 2)} %"
                 self.log.info(self.cmd(msg1, "Mercado preseleccionado: " if preselected else "Mercado potencial: "))                                
                 lastPrice = float(marketData["tickerData"]["last"])
+                #travajar aqui para que se pueda especificar el amoumt por porciemto.
                 amountToInvestAsQuote = float(self.config.data["amountToInvestAsQuote"])
                 amountToInvestAsBase = amountToInvestAsQuote / lastPrice 
                 if self.core.check_market_limits(marketData["symbolData"], amountToInvestAsBase, lastPrice):
-                    graphFileName = report.create_unique_filename()
+                    graphFileName = report.create_unique_filename(symbolId)
                     graphTitle = f'{self.botId} {self.exchangeId} {symbolId}'
                     report.create_graph(marketData["candles1h"], graphTitle, graphFileName, marketData["metrics"], False)           
                     marketData["status"] = "potential"         
@@ -454,6 +447,7 @@ class TrendTaker(Basics):
                                 if self.invest_in(symbolId, amountToInvestAsBase):
                                     marketData["status"] = "new"   
                     report.append_market_data(graphFileName, marketData)
+                    time.sleep(1)
         if self.config.data["createWebReport"]:
             report.create_web(self.config.data["showWebReport"])
         if self.core.investments.empty():

@@ -1,0 +1,92 @@
+{
+    "initial": {
+        "datetimeUTC": "2024-04-29T18:51:40.222Z",
+        "timestamp": 1714416700222,
+        "balanceQuote": 0.002040601495
+    },
+    "final": {
+        "datetimeUTC": "2024-04-29T18:51:46.629Z",
+        "timestamp": 1714416706629,
+        "balanceQuote": 0.002040601495
+    },
+    "total": {
+        "investmentsCount": 0,
+        "feeAsQuote": 6.000000000000001e-07,
+        "profitAsQuote": 0.0,
+        "hours": 0.0,
+        "exposureHours": 0.0
+    },
+    "statistics": {
+        "minProfitAsPercent": null,
+        "minProfitAsQuote": null,
+        "maxProfitAsPercent": null,
+        "maxProfitAsQuote": null,
+        "profitAsQuoteInBalance": null,
+        "profitAsPercentInBalance": null
+    },
+    "currentInvestments": {
+        "ETH/BTC": {
+            "symbol": "ETH/BTC",
+            "amountAsBase": 0.0019817284635659225,
+            "lastTickerPrice": 0.050461,
+            "buy": {
+                "id": "1714416700222",
+                "price": 0.050461,
+                "amountAsBase": 0.0019817284635659225,
+                "fee": 2.0000000000000004e-07,
+                "timestamp": 1714416700222,
+                "datetimeUTC": "2024-04-29T18:51:40.222Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "CSOV/BTC": {
+            "symbol": "CSOV/BTC",
+            "amountAsBase": 598.0861244019139,
+            "lastTickerPrice": 1.672e-07,
+            "buy": {
+                "id": "1714416695000",
+                "price": 1.672e-07,
+                "amountAsBase": 598.0861244019139,
+                "fee": 2.0000000000000002e-07,
+                "timestamp": 1714416695000,
+                "datetimeUTC": "2024-04-29T18:51:35.000Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        },
+        "XMR/BTC": {
+            "symbol": "XMR/BTC",
+            "amountAsBase": 0.050327126321087066,
+            "lastTickerPrice": 0.001987,
+            "buy": {
+                "id": "1714416706629",
+                "price": 0.001987,
+                "amountAsBase": 0.050327126321087066,
+                "fee": 2.0000000000000002e-07,
+                "timestamp": 1714416706629,
+                "datetimeUTC": "2024-04-29T18:51:46.629Z"
+            },
+            "forExit": {
+                "profitPercent": null,
+                "maxLossPercent": null,
+                "trailingStop": false,
+                "takeProfitPrice": null,
+                "stopLossPrice": null,
+                "maxHours": 168
+            }
+        }
+    }
+}

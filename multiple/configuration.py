@@ -3,6 +3,14 @@ from file_manager import *
 from basics import *
 import logging
 
+
+DEBUG_MODE = {
+    "ignoreBalance": True,      # En True, hace que se ignore el balance insuficiente.
+    "simulateOrders": True,     # En True, hace que las ordenes de compra y venta sean simuladas.    
+    "onlyBuyAndSell": None      # Ejecuta una compra y venta e el mercado especificado. Se desactiva con None.
+}
+
+
 DIRECTORY_LOGS = "./logs/"
 DIRECTORY_LEDGER = "./ledger/"
 DIRECTORY_GRAPHICS = "./graphics/"
@@ -46,8 +54,9 @@ DEFAULT_CONFIGURATION = {
 
 class Configuration(Basics):
 
-    def __init__(self, botId:str):
+    def __init__(self, botId:str, exchangeId:str):
         self.botId = botId
+        self.exchangeId = exchangeId
         self.data:Dict = DEFAULT_CONFIGURATION
         self.log = logging.getLogger(botId)
 
@@ -64,15 +73,15 @@ class Configuration(Basics):
             FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfigurationExample, self.log)
             loadedConfiguration = FileManager.data_from_file_json(fileNameConfiguration, False, self.log)
             if loadedConfiguration is not None:
-                self.configuration = loadedConfiguration
+                self.data = loadedConfiguration
             else:
                 FileManager.data_to_file_json(DEFAULT_CONFIGURATION, fileNameConfiguration, self.log)
                 self.log.error(self.cmd('Error: No se econtro un fichero de configuracion para el bot.', '\n'))
                 self.log.error(self.cmd(f'ATENCION: Se ha creado un fichero de configuracion default: "{fileNameConfiguration}"'))
                 self.log.error(self.cmd('Debe revisar o editar el fichero de configuracion antes de volver a ejecutar el bot.'))
                 return False
-            self.log.info(f"La configuracion actual es: {str(self.configuration)}")
-            Basics.show_object(self.configuration, "\nLa configuracion actual es:") 
+            self.log.info(f"La configuracion actual es: {str(self.data)}")
+            Basics.show_object(self.data, "\nLa configuracion actual es:") 
             return True
         except Exception as e:
             self.log.exception(self.cmd(f'Error: No se pudo establecer la configuracion del bot. Exception: {str(e)}'))

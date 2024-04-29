@@ -38,13 +38,14 @@ class Report(Basics):
 
 
         
-    def create_unique_filename(self) -> str:
+    def create_unique_filename(self, symbolId:MarketId) -> str:
         '''
         Crea un nombre de fichero unico utilizando la fecha-hora actual y la extension.
         return: Cadena con un nombre de fichero unico.
         '''
-        dateTimeLabel = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        return f'{self.botId}_{self.exchangeId}__{dateTimeLabel}.{self.extension}' 
+        symbolId = symbolId.replace("/", "_")
+        dateTimeLabel = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        return f'{self.botId}_{self.exchangeId}_{symbolId}_{dateTimeLabel}.{self.extension}' 
 
 
     
@@ -108,7 +109,8 @@ class Report(Basics):
                                 if type(param["value"]) == str:
                                     valueStr = str(f'{param["value"]} {param["unit"]}')
                                 else:
-                                    valueStr = str(f'{round(param["value"], param["decimals"])} {param["unit"]}')
+                                    value = self.decimal_string(round(param["value"], param["decimals"]))
+                                    valueStr = str(f'{value} {param["unit"]}')
                                 color = param.get("color", '#0000ff')
                                 if param.get("strong", False):
                                     valueStr = f"<strong>{valueStr}</strong>"
@@ -244,6 +246,7 @@ class Report(Basics):
         '''    
         metrics = marketData["metrics"]
         result: MetricsSummary = {
+            "market ID": { "value": f'{metrics["base"]}/{metrics["quote"]}' , "decimals": 0, "unit": "", "strong": True },
             "preselected market": { "value": "SI" if marketData["preselected"] else "NO", "decimals": 0, "unit": "" },
             "candles colapses": { "value": metrics["candles"]["percent"]["colapses"], "decimals": 2, "unit": "%" },
             "candles completion": { "value": metrics["candles"]["percent"]["completion"], "decimals": 2, "unit": "%" },

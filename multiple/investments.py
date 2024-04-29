@@ -12,13 +12,14 @@ InvestmentStatus = Dict
 
 class Investments(Basics):
     
-    def __init__(self, botId:str, directoryLedger:str):
+    def __init__(self, botId:str, exchangeId:str, directoryLedger:str, quote:CurrencyId):
         self.botId = botId
+        self.exchangeId = exchangeId
         self.prepare_directory(directoryLedger)
         self.log = logging.getLogger(botId)
         self.fileLedger = FileLedger(self.botId, directoryLedger) 
         self.fileInvestments = FileInvestments(self.botId, directoryLedger) 
-        self.fileName = f'./{self.botId}_current_investment.json'
+        self.fileName = f'./{self.botId}_{self.exchangeId}_{quote}_investments.json'
         self.data:InvestmentsData = {
             "initial": {
                 "datetimeUTC": None,
