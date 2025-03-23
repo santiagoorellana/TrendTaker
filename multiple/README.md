@@ -12,6 +12,5 @@ A partir de las estadisticas y valores para el analisis cuantitativo, se calcula
 
 Santiago Orellana <br>
 Email: <a href="mailto:tecnochago@gmail.com?Subject=Quiero%20un%20bot%20de%20trading">tecnochago@gmail.com</a><br>
-Whatsapp: <a href="https://wa.me/5354635944?text=Quiero un bot de trading">+5354635944</a><br>
-SetV+, Havana, Cuba, 2022
+Whatsapp: <a href="https://wa.me/5354635944?text=Quiero un bot de trading">+5354635944</a>
 
